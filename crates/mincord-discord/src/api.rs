@@ -371,7 +371,10 @@ impl Api {
                 request = request.header(name, value);
             }
         }
-        let answer = self.json(with_json(request, &body)).await?;
+        let answer = self
+            .json(with_json(request, &body))
+            .await
+            .map_err(ticket_gone)?;
         answer["encrypted_token"]
             .as_str()
             .map(str::to_owned)
@@ -2065,6 +2068,19 @@ async fn body(response: Response) -> Value {
     match response.bytes().await {
         Ok(body) => serde_json::from_slice(&body).unwrap_or_default(),
         Err(_) => Value::Null,
+    }
+}
+
+/// Says what a refused sign-in means. Discord forgets a remote sign-in's
+/// ticket soon after the phone approves it, and answers a late trade with
+/// 404, which the general wording calls a missing message or channel. It
+/// runs out while a captcha is being solved, so the advice is to scan again.
+fn ticket_gone(error: anyhow::Error) -> anyhow::Error {
+    match error.downcast_ref::<Refused>() {
+        Some(Refused(StatusCode::NOT_FOUND)) => error.context(
+            "Discord forgot the sign-in before Mincord could finish it. Scan the code again.",
+        ),
+        _ => error,
     }
 }
 

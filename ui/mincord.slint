@@ -59,6 +59,9 @@ export { RequestRow, FriendRow } from "friends.slint";
 export { ContactRow, ForwardRow, ReactionPill, ReactorRow, PollAnswerDraft } from "dialogs.slint";
 export { FoundRow, PickRow } from "header.slint";
 export { GifTile, GifFavorites } from "gifs.slint";
+// The stage an update is at, which src/ui/update.rs sets: a type the
+// generated Rust only has when the root file exports it, not merely imports it.
+export { UpdateStage } from "update.slint";
 
 export component MincordWindow inherits Window {
     /// "Mincord", or "(3) Mincord" with mentions and DMs waiting, as a browser

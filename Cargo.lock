@@ -5669,6 +5669,141 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbf6f36070878c42c5233846cd3de24cf9016828fd47bc22957a687298bb21fc"
 
 [[package]]
+name = "mincord"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "arboard",
+ "emojis",
+ "futures-util",
+ "i-slint-backend-testing",
+ "i-slint-core",
+ "i-slint-renderer-skia",
+ "image",
+ "ksni",
+ "libc",
+ "memmap2",
+ "mincord-core",
+ "mincord-discord",
+ "mincord-ui",
+ "qrcode",
+ "reqwest 0.13.5",
+ "rfd",
+ "rustls",
+ "serde",
+ "serde_json",
+ "skia-safe",
+ "slint",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-protocols",
+ "wayland-scanner",
+ "webbrowser",
+ "windows-sys 0.61.2",
+ "wl-clipboard-rs",
+ "x11rb",
+ "xkeysym",
+ "zbus",
+]
+
+[[package]]
+name = "mincord-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "cc",
+ "chrono",
+ "cxx",
+ "deep_filter",
+ "directories",
+ "ffmpeg-src",
+ "futures-util",
+ "gif",
+ "image",
+ "keyring",
+ "libpulse-binding",
+ "libpulse-simple-binding",
+ "livekit",
+ "matrix-rtc-core",
+ "matrix-rtc-livekit",
+ "matrix-rtc-media",
+ "matrix-sdk",
+ "matrix-sdk-crypto",
+ "matrix-sdk-ui",
+ "memmap2",
+ "mime",
+ "mincord-discord",
+ "ndarray",
+ "nnnoiseless",
+ "png",
+ "pulldown-cmark",
+ "rand 0.9.5",
+ "realfft",
+ "rustls",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "webrtc-sys",
+ "webrtc-sys-build",
+ "windows",
+ "windows-core",
+ "x264-src",
+]
+
+[[package]]
+name = "mincord-discord"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "anyhow",
+ "base64 0.22.1",
+ "chacha20poly1305 0.10.1",
+ "chrono",
+ "cookie_store",
+ "davey",
+ "flate2",
+ "futures-util",
+ "keyring",
+ "libc",
+ "openmls",
+ "openmls_basic_credential",
+ "openmls_rust_crypto",
+ "rand 0.9.5",
+ "reqwest 0.13.5",
+ "rsa",
+ "rustls",
+ "serde",
+ "serde_json",
+ "serenity-voice-model",
+ "sha2 0.10.9",
+ "sysinfo",
+ "tempfile",
+ "tokio",
+ "tokio-tungstenite 0.26.2",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "webrtc-sys",
+]
+
+[[package]]
+name = "mincord-ui"
+version = "0.1.0"
+dependencies = [
+ "slint",
+ "slint-build",
+]
+
+[[package]]
 name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7864,6 +7999,8 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "rustls-platform-verifier",
+ "serde",
+ "serde_json",
  "sync_wrapper",
  "tokio",
  "tokio-rustls",
@@ -11512,138 +11649,6 @@ name = "xxhash-rust"
 version = "0.8.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aee1b19627c7c60102ab80d3a9cbe18de90bfe03bfa6c3715447681f0e8c8af6"
-
-[[package]]
-name = "mincord"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "arboard",
- "emojis",
- "futures-util",
- "i-slint-backend-testing",
- "i-slint-core",
- "i-slint-renderer-skia",
- "image",
- "ksni",
- "libc",
- "memmap2",
- "qrcode",
- "rfd",
- "serde",
- "serde_json",
- "skia-safe",
- "slint",
- "tempfile",
- "tracing",
- "wayland-backend",
- "wayland-client",
- "wayland-protocols",
- "wayland-scanner",
- "webbrowser",
- "windows-sys 0.61.2",
- "wl-clipboard-rs",
- "x11rb",
- "xkeysym",
- "mincord-core",
- "mincord-discord",
- "mincord-ui",
- "zbus",
-]
-
-[[package]]
-name = "mincord-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "cc",
- "chrono",
- "cxx",
- "deep_filter",
- "directories",
- "ffmpeg-src",
- "futures-util",
- "gif",
- "image",
- "keyring",
- "libpulse-binding",
- "libpulse-simple-binding",
- "livekit",
- "matrix-rtc-core",
- "matrix-rtc-livekit",
- "matrix-rtc-media",
- "matrix-sdk",
- "matrix-sdk-crypto",
- "matrix-sdk-ui",
- "memmap2",
- "mime",
- "ndarray",
- "nnnoiseless",
- "png",
- "pulldown-cmark",
- "rand 0.9.5",
- "realfft",
- "rustls",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
- "uuid",
- "webrtc-sys",
- "webrtc-sys-build",
- "windows",
- "windows-core",
- "x264-src",
- "mincord-discord",
-]
-
-[[package]]
-name = "mincord-discord"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "anyhow",
- "base64 0.22.1",
- "chacha20poly1305 0.10.1",
- "chrono",
- "cookie_store",
- "davey",
- "flate2",
- "futures-util",
- "keyring",
- "libc",
- "openmls",
- "openmls_basic_credential",
- "openmls_rust_crypto",
- "rand 0.9.5",
- "reqwest 0.13.5",
- "rsa",
- "rustls",
- "serde",
- "serde_json",
- "serenity-voice-model",
- "sha2 0.10.9",
- "sysinfo",
- "tempfile",
- "tokio",
- "tokio-tungstenite 0.26.2",
- "tracing",
- "tracing-subscriber",
- "url",
- "webrtc-sys",
-]
-
-[[package]]
-name = "mincord-ui"
-version = "0.1.0"
-dependencies = [
- "slint",
- "slint-build",
-]
 
 [[package]]
 name = "yazi"

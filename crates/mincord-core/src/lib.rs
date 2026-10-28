@@ -104,8 +104,79 @@ pub fn default_directory() -> anyhow::Result<std::path::PathBuf> {
 /// across restarts.
 #[cfg(feature = "discord")]
 pub fn keep_discord_files(root: &std::path::Path) {
-    mincord_discord::cookies::keep_in(root.join("discord-cookies.json"));
+    let cookies = root.join("discord-cookies.json");
+    take_over_cookies(&cookies);
+    mincord_discord::cookies::keep_in(cookies);
     mincord_discord::cache::keep_in(root.join("discord-account.json"));
+}
+
+/// Where Yapfast, the client Mincord was forked from, keeps its files.
+#[cfg(feature = "discord")]
+fn forked_from() -> Option<std::path::PathBuf> {
+    directories::ProjectDirs::from("io.github", "yapfast", "Yapfast")
+        .map(|dirs| dirs.data_local_dir().to_owned())
+}
+
+/// Takes a Yapfast install's Discord cookies, once, when Mincord has none of
+/// its own yet.
+///
+/// Discord and Cloudflare know a device by the cookies they set on its first
+/// answer, so a client starting without them looks like a device they have
+/// never seen. Discord answers one of those with a captcha, and keeps asking
+/// while it trades a QR code's ticket for a login, by which time the ticket
+/// has run out. Mincord's data folder isn't Yapfast's, so without this every
+/// first sign-in here met that, where the same machine's Yapfast never did.
+///
+/// Only the cookies come over. The account stays where it is: the token is in
+/// the operating system's credential store under each client's own name, so
+/// Mincord still links an account of its own, and Yapfast keeps working.
+#[cfg(feature = "discord")]
+fn take_over_cookies(cookies: &std::path::Path) {
+    if cookies.exists() {
+        return;
+    }
+    let Some(theirs) = forked_from().map(|root| root.join("discord-cookies.json")) else {
+        return;
+    };
+    if !theirs.exists() {
+        return;
+    }
+    if copy_once(&theirs, cookies) {
+        tracing::info!("took the Discord cookies over from Yapfast");
+    }
+}
+
+/// Copies `from` to `to`, unless `to` is already there or `from` isn't.
+/// Says whether it did.
+#[cfg(feature = "discord")]
+fn copy_once(from: &std::path::Path, to: &std::path::Path) -> bool {
+    if to.exists() || !from.is_file() {
+        return false;
+    }
+    match std::fs::copy(from, to) {
+        Ok(_) => true,
+        Err(error) => {
+            tracing::warn!(%error, "could not take Yapfast's Discord cookies over");
+            false
+        }
+    }
+}
+
+#[cfg(all(test, feature = "discord"))]
+mod tests {
+    #[test]
+    fn cookies_come_over_once_and_never_replace_our_own() {
+        let folder = tempfile::tempdir().unwrap();
+        let (theirs, ours) = (folder.path().join("theirs"), folder.path().join("ours"));
+        assert!(!super::copy_once(&theirs, &ours), "nothing to take over");
+        std::fs::write(&theirs, b"their cookies").unwrap();
+        assert!(super::copy_once(&theirs, &ours));
+        assert_eq!(std::fs::read(&ours).unwrap(), b"their cookies");
+        // A later start keeps the cookies Discord has set for Mincord since.
+        std::fs::write(&ours, b"ours now").unwrap();
+        assert!(!super::copy_once(&theirs, &ours));
+        assert_eq!(std::fs::read(&ours).unwrap(), b"ours now");
+    }
 }
 
 /// Check linked native services without a session, network request or audio device.

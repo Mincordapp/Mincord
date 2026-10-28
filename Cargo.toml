@@ -58,7 +58,9 @@ tokio = { workspace = true, optional = true }
 # is already in the tree through it and through matrix-sdk. Only Windows
 # installs an update, but the check builds everywhere, so it is checked
 # and tested on every build.
-reqwest = { version = "0.13", default-features = false, features = ["http2", "rustls-no-provider", "stream"], optional = true }
+# "json" reads GitHub's release feed in src/update.rs; serde_json, which it
+# brings, is already here.
+reqwest = { version = "0.13", default-features = false, features = ["http2", "json", "rustls-no-provider", "stream"], optional = true }
 rustls = { workspace = true, optional = true }
 # The download's chunks, written to the file as they arrive, and the
 # push-to-talk portal's signals as a stream on Linux.

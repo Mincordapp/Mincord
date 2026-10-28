@@ -1100,7 +1100,13 @@ export component TextBlocks inherits VerticalLayout {
 }
 
 // Link previews and bot cards, behind a bar of their colour.
-export component EmbedView inherits HorizontalLayout {
+//
+// A flexbox row, not a `HorizontalLayout`: measuring a box row's height at a
+// known width hands each cell the whole width rather than the width the row
+// gives it, so the card's wrapped text counted too few lines and the message
+// row came out shorter than the card drew, which put the card over the
+// message below. A flexbox measures each cell at the width it solves for.
+export component EmbedView inherits FlexboxLayout {
     in property <EmbedCard> embed;
     /// The message's item, which its pictures open by.
     in property <string> item;

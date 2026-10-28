@@ -40,14 +40,29 @@ fn firefox_version() -> i64 {
     FIRST + days.max(0) / 14 - 1
 }
 
-/// The `User-Agent` of a current Firefox on Linux.
+/// How this machine looks to Discord: the `os` and `os_version` the web
+/// client sends there, and the platform part of a Firefox `User-Agent`.
+/// Mincord says where it really runs, because Discord weighs a captcha's
+/// solution against the request that follows it, and a solution made in a
+/// browser on this machine next to a request claiming another system reads
+/// as a machine worth asking again.
+fn platform() -> (&'static str, &'static str, &'static str) {
+    if cfg!(windows) {
+        ("Windows", "10", "Windows NT 10.0; Win64; x64")
+    } else if cfg!(target_os = "macos") {
+        ("Mac OS X", "10.15", "Macintosh; Intel Mac OS X 10.15")
+    } else {
+        ("Linux", "", "X11; Linux x86_64")
+    }
+}
+
+/// The `User-Agent` of a current Firefox on this system.
 pub fn user_agent() -> &'static str {
     static AGENT: OnceLock<String> = OnceLock::new();
     AGENT.get_or_init(|| {
         let version = firefox_version();
-        format!(
-            "Mozilla/5.0 (X11; Linux x86_64; rv:{version}.0) Gecko/20100101 Firefox/{version}.0"
-        )
+        let (_, _, platform) = platform();
+        format!("Mozilla/5.0 ({platform}; rv:{version}.0) Gecko/20100101 Firefox/{version}.0")
     })
 }
 
@@ -146,15 +161,16 @@ fn heartbeat_session_id() -> String {
 
 /// The `properties` object sent when identifying on the gateway.
 pub fn properties() -> Value {
+    let (os, os_version, _) = platform();
     json!({
-        "os": "Linux",
+        "os": os,
         "browser": "Firefox",
         "device": "",
         "system_locale": "en-US",
         "has_client_mods": false,
         "browser_user_agent": user_agent(),
         "browser_version": format!("{}.0", firefox_version()),
-        "os_version": "",
+        "os_version": os_version,
         "referrer": "",
         "referring_domain": "",
         "referrer_current": "",
@@ -176,6 +192,14 @@ pub fn super_properties() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn says_which_system_it_runs_on() {
+        let (os, _, platform) = platform();
+        assert_eq!(properties()["os"], os);
+        assert!(user_agent().contains(platform), "{}", user_agent());
+        assert_eq!(cfg!(windows), os == "Windows");
+    }
 
     #[test]
     fn reads_the_build_number_from_the_web_page() {

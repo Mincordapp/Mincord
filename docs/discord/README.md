@@ -167,6 +167,30 @@ listener lives only while the page waits, so nothing stays loaded afterwards.
 Whether Discord takes a solution made this way awaits a real captcha. [Joining
 by invite](servers.md#joining-by-invite) shows Discord's captchas the same way.
 
+A ticket doesn't outlast many captchas. Discord forgets one soon after the
+phone approves it, and answers a late trade with 404, which the general
+wording would call a missing message or channel; `Api::remote_auth_login`
+names it instead, and says to scan the code again. So a captcha Discord
+doesn't take costs the sign-in: the second one it asks for arrives after the
+ticket is already gone.
+
+Discord weighs a solution against the request that carries it, and a captcha
+solved in a browser on this machine beside a request claiming another system
+reads as a machine worth asking again. So `client.rs` says where Mincord
+really runs: `platform()` gives the `os` and `os_version` of
+`X-Super-Properties` and the platform part of the Firefox `User-Agent`, for
+Windows, macOS or Linux, rather than one system everywhere.
+
+Which devices Discord knows is the cookies it and Cloudflare set on their
+first answer (`cookies.rs`), kept in the data folder. Mincord's folder isn't
+Yapfast's, the client it was forked from, so a machine with both began here as
+a device Discord had never seen, and met the captchas above where its Yapfast
+never did. A first start with no cookies of its own takes that install's over,
+once (`take_over_cookies` in `mincord-core`). Only the cookies come over: the
+token is in the credential store under each client's own name
+(`io.github.mincord.Mincord`), so Mincord still links an account of its own,
+and Yapfast goes on working.
+
 Store the Discord token in the OS credential store, next to the Matrix session.
 The token gives full control of the account, so it never goes into Matrix, not
 even encrypted. A device that links appears in Discord as its own session.
