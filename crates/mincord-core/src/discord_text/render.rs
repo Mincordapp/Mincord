@@ -294,15 +294,18 @@ pub(super) fn hits_in(discord: &Discord, guild: &str, messages: &[Message]) -> V
         .collect()
 }
 
-/// The custom emoji in a message's text and reactions.
+/// The custom emoji in a message's text, cards, embeds and reactions.
 pub(super) fn custom_emoji(message: &Message) -> Vec<CustomEmoji> {
     let mut found = emoji_in(&message.content);
-    for card in &message.components {
-        for text in card.texts().chain(card.rows.iter().flat_map(button_emoji)) {
-            for emoji in emoji_in(text) {
-                if !found.iter().any(|known| known.id == emoji.id) {
-                    found.push(emoji);
-                }
+    let cards = message
+        .components
+        .iter()
+        .flat_map(|card| card.texts().chain(card.rows.iter().flat_map(button_emoji)));
+    let embeds = message.embeds.iter().flat_map(|embed| embed.texts());
+    for text in cards.chain(embeds) {
+        for emoji in emoji_in(text) {
+            if !found.iter().any(|known| known.id == emoji.id) {
+                found.push(emoji);
             }
         }
     }
@@ -635,22 +638,25 @@ pub(super) fn chat_embed(
     embed: &mincord_discord::embed::Embed,
 ) -> Embed {
     let text = |text: &Option<String>| text.clone().unwrap_or_default();
+    // The title and fields carry tags, as the description does: Discord's
+    // client draws their mentions and custom emoji too.
+    let rendered = |text: &Option<String>| {
+        text.as_deref()
+            .map(|text| discord.render(server, text))
+            .unwrap_or_default()
+    };
     Embed {
         color: embed.color,
         provider: text(&embed.provider),
         author: text(&embed.author),
-        title: text(&embed.title),
+        title: rendered(&embed.title),
         url: text(&embed.url),
-        description: embed
-            .description
-            .as_deref()
-            .map(|description| discord.render(server, description))
-            .unwrap_or_default(),
+        description: rendered(&embed.description),
         fields: embed
             .fields
             .iter()
             .map(|field| EmbedField {
-                name: field.name.clone(),
+                name: discord.render(server, &field.name),
                 value: discord.render(server, &field.value),
                 inline: field.inline,
             })

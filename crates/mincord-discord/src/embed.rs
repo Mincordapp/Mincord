@@ -36,6 +36,20 @@ pub struct Embed {
     pub video: bool,
 }
 
+impl Embed {
+    /// The texts whose tags a card draws: its title, description and fields.
+    /// Discord's client draws the provider, author and footer as typed,
+    /// mentions and custom emoji and all.
+    pub fn texts(&self) -> impl Iterator<Item = &str> {
+        let own = [&self.title, &self.description];
+        let fields = self
+            .fields
+            .iter()
+            .flat_map(|field| [field.name.as_str(), field.value.as_str()]);
+        own.into_iter().flatten().map(String::as_str).chain(fields)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Field {
     pub name: String,
@@ -435,5 +449,19 @@ mod tests {
                 .all(|picture| picture.shown == Shown::Embed(0))
         );
         assert_eq!(parsed.pictures.len(), 2);
+    }
+
+    #[test]
+    fn cards_offer_the_texts_whose_tags_are_drawn() {
+        let parsed = parse(&json!([
+            {"type": "rich", "title": "<:failed:5> Case", "description": "by <@9>",
+             "fields": [{"name": "<:details:6> Details", "value": "<a:spin:7> yes"}],
+             "author": {"name": "<:author:8>"}, "footer": {"text": "<:foot:9>"},
+             "provider": {"name": "<:site:10>"}},
+        ]));
+        assert_eq!(
+            parsed.embeds[0].texts().collect::<Vec<_>>(),
+            ["<:failed:5> Case", "by <@9>", "<:details:6> Details", "<a:spin:7> yes"]
+        );
     }
 }

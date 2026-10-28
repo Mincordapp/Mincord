@@ -784,14 +784,17 @@ fn embed_fields_share_rows_three_inline_at_a_time() {
         value: String::new(),
         inline,
     };
-    let rows = field_rows(&[
-        field("a", true),
-        field("b", true),
-        field("c", true),
-        field("d", true),
-        field("e", false),
-        field("f", true),
-    ]);
+    let rows = field_rows(
+        &[
+            field("a", true),
+            field("b", true),
+            field("c", true),
+            field("d", true),
+            field("e", false),
+            field("f", true),
+        ],
+        &[],
+    );
     let names: Vec<Vec<slint::StyledText>> = rows
         .iter()
         .map(|row| row.fields.iter().map(|field| field.name).collect())

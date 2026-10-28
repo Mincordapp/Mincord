@@ -212,7 +212,11 @@ an error.
   shows with the message's images, without its address when that's all the
   message says. Pictures come through Discord's
   media proxy (`images-ext-*.discordapp.net`), so Mincord never contacts the
-  linked site, and embeds of a message marked to hide them don't show.
+  linked site, and embeds of a message marked to hide them don't show. A
+  card's title, description and fields carry tags, which show as their text:
+  mentions by name, and custom emoji as pictures, counted among the
+  message's so their pictures arrive. Its site, author and footer show as
+  typed, as Discord's client draws them.
 - Animated GIFs, APNGs and animated WebPs play, in messages, as stickers and in
   the image viewer. The media proxy keeps GIFs as GIFs; other pictures come as
   WebP, asked for with `animated=true` as Discord's client does, so an animated

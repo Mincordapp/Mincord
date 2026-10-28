@@ -376,17 +376,21 @@ pub(super) fn bold(text: &str) -> slint::StyledText {
 
 /// An embed's fields in rows: up to three inline fields share one, and any
 /// other field takes a row of its own, as in Discord.
-pub(super) fn field_rows(fields: &[EmbedField]) -> ModelRc<EmbedFieldRow> {
+pub(super) fn field_rows(
+    fields: &[EmbedField],
+    emoji: &[mincord_core::chat::CustomEmoji],
+) -> ModelRc<EmbedFieldRow> {
     let mut rows: Vec<Vec<mincord_ui::EmbedField>> = Vec::new();
     let mut open = false;
     for field in fields {
-        let value_blocks = markdown_blocks(&field.value);
+        let value = custom_emoji::text(&field.value, emoji);
+        let value_blocks = markdown_blocks(&value);
         let cell = mincord_ui::EmbedField {
-            name: bold(&field.name),
+            name: bold(&custom_emoji::text(&field.name, emoji)),
             value: if value_blocks.row_count() > 0 {
                 slint::StyledText::default()
             } else {
-                markdown(&field.value)
+                markdown(&value)
             },
             value_blocks,
         };
@@ -540,7 +544,9 @@ pub(super) fn message_row(message: &ChatMessage, revealed: &HashSet<String>) -> 
             let (images, gallery_width, gallery_height) =
                 gallery(&previews(Placement::Embed(index)), &covered);
             let thumbnail = previews(Placement::Thumbnail(index)).into_iter().next();
-            let description_blocks = markdown_blocks(&embed.description);
+            let title = custom_emoji::text(&embed.title, &message.emoji);
+            let description = custom_emoji::text(&embed.description, &message.emoji);
+            let description_blocks = markdown_blocks(&description);
             EmbedCard {
                 color: role_color(embed.color),
                 has_color: embed.color.is_some(),
@@ -548,17 +554,17 @@ pub(super) fn message_row(message: &ChatMessage, revealed: &HashSet<String>) -> 
                 has_provider: !embed.provider.is_empty(),
                 author: bold(&embed.author),
                 has_author: !embed.author.is_empty(),
-                title: embed_title(&embed.title, &embed.url),
-                has_title: !embed.title.is_empty(),
+                title: embed_title(&title, &embed.url),
+                has_title: !title.is_empty(),
                 url: embed.url.clone().into(),
                 description: if description_blocks.row_count() > 0 {
                     slint::StyledText::default()
                 } else {
-                    markdown(&embed.description)
+                    markdown(&description)
                 },
-                has_description: !embed.description.is_empty(),
+                has_description: !description.is_empty(),
                 description_blocks,
-                field_rows: field_rows(&embed.fields),
+                field_rows: field_rows(&embed.fields, &message.emoji),
                 footer: slint::StyledText::from_plain_text(&embed.footer),
                 has_footer: !embed.footer.is_empty(),
                 thumbnail: thumbnail
