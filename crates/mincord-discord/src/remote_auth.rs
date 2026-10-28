@@ -81,7 +81,10 @@ impl std::error::Error for Stopped {}
 /// when the code expired or the person said no.
 pub async fn link(mut step: impl FnMut(Step)) -> Result<String> {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
-    Api::anonymous()?.learn_build_number().await;
+    // As a browser would have the site open before signing in: this renews
+    // the cookies that say Discord has seen this machine, which a sign-in
+    // without makes Discord doubt, and learns the build number.
+    Api::anonymous()?.warm_cookies().await;
     let key = tokio::task::spawn_blocking(|| RsaPrivateKey::new(&mut OsRng, KEY_BITS))
         .await?
         .context("could not make a key to link with")?;
@@ -158,13 +161,22 @@ pub async fn link(mut step: impl FnMut(Step)) -> Result<String> {
             }
             "pending_ticket" => {
                 let payload = decrypt(&key, &message["encrypted_user_payload"])?;
+                tracing::info!("someone scanned the code; waiting for the phone");
                 step(scanned(&String::from_utf8_lossy(&payload)));
             }
             "pending_login" => {
                 let ticket = message["ticket"]
                     .as_str()
                     .context("Discord's login service sent no ticket")?;
-                let encrypted = trade(ticket, &mut socket, &mut heartbeat, &mut step).await?;
+                let confirmed = std::time::Instant::now();
+                tracing::info!("the phone confirmed; trading the ticket for the login");
+                let traded = trade(ticket, &mut socket, &mut heartbeat, &mut step).await;
+                tracing::info!(
+                    seconds = confirmed.elapsed().as_secs(),
+                    took = traded.is_ok(),
+                    "Discord answered the trade"
+                );
+                let encrypted = traded?;
                 let _ = socket.close(None).await;
                 return login(&key, &Value::String(encrypted));
             }
@@ -189,6 +201,10 @@ async fn trade(
     step: &mut impl FnMut(Step),
 ) -> Result<String> {
     let api = Api::anonymous()?;
+    tracing::info!(
+        known = crate::cookies::device_known(),
+        "trading the ticket for the login"
+    );
     let mut solved: Option<(Captcha, String)> = None;
     for shown in 0..=captcha::TRIES {
         let solution = solved
@@ -204,6 +220,18 @@ async fn trade(
         if shown == captcha::TRIES {
             bail!("Discord didn't take the captcha. Try again.");
         }
+        // What Discord said and what Mincord has to answer with: a second
+        // ask naming `invalid-input-response` means it turned the first
+        // solution down, which is what runs the ticket out.
+        tracing::info!(
+            ask = shown + 1,
+            said = %captcha.keys.join(", "),
+            rqdata = captcha.rqdata.is_some(),
+            rqtoken = captcha.rqtoken.is_some(),
+            session = captcha.session_id.is_some(),
+            "Discord asked for a captcha"
+        );
+        let waited = std::time::Instant::now();
         let page = captcha::Page::serve(&captcha).await?;
         step(Step::Captcha(page.url.clone()));
         let solution = page.solution();
@@ -218,6 +246,11 @@ async fn trade(
                 message = socket.next(), if open => open = matches!(message, Some(Ok(_))),
             }
         };
+        tracing::info!(
+            ask = shown + 1,
+            seconds = waited.elapsed().as_secs(),
+            "a captcha was solved; sending it back"
+        );
         solved = Some((captcha, solution));
     }
     unreachable!("the last captcha returns")

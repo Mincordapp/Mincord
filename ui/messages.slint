@@ -1236,7 +1236,9 @@ component CardButtonView inherits ActionButton {
 
 // A Discord message's container of components, or those outside one: text
 // beside a thumbnail or button, galleries, files, gaps, buttons and menus.
-export component CardView inherits HorizontalLayout {
+// A flexbox row, not a `HorizontalLayout`, for the reason given above
+// [`EmbedView`]: a box row hands each cell the whole width when it measures.
+export component CardView inherits FlexboxLayout {
     in property <ComponentCard> card;
     /// The message's item, which its pictures open by, and its delivery
     /// state, empty once it's sent.

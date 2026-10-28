@@ -87,13 +87,49 @@ async fn run(progress: impl Fn(Progress)) {
     .await;
     progress(match linked.and_then(|login| token::store(&login)) {
         Ok(()) => Progress::Linked,
-        Err(error) => match error.downcast_ref::<Stopped>() {
-            Some(Stopped::Expired) => Progress::Expired,
-            Some(stopped) => Progress::Failed(stopped.to_string()),
-            None => {
-                tracing::warn!(error = format!("{error:#}"), "could not link Discord");
-                Progress::Failed(format!("Mincord couldn't link Discord: {error}"))
-            }
-        },
+        Err(error) => stopped(error),
     });
+}
+
+/// What to show when linking by code ended in `error`.
+fn stopped(error: anyhow::Error) -> Progress {
+    match error.downcast_ref::<Stopped>() {
+        Some(Stopped::Expired) => return Progress::Expired,
+        Some(stopped) => return Progress::Failed(stopped.to_string()),
+        None => {}
+    }
+    // Discord forgets a confirmed sign-in's ticket soon after the phone
+    // approves it, and answers a late trade with 404. Solving a captcha can
+    // take longer than it waits, and the only way on from a lost ticket is a
+    // new code, so this shows one rather than stopping at an error.
+    if matches!(error.downcast_ref::<Refused>(), Some(Refused(status)) if status.as_u16() == 404) {
+        tracing::warn!("Discord forgot the sign-in's ticket; showing a new code");
+        return Progress::Expired;
+    }
+    tracing::warn!(error = format!("{error:#}"), "could not link Discord");
+    Progress::Failed(format!("Mincord couldn't link Discord: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_lost_ticket_asks_for_a_new_code_rather_than_stopping() {
+        let gone = anyhow::Error::new(Refused(
+            mincord_discord::api::StatusCode::NOT_FOUND,
+        ))
+        .context("Discord forgot the sign-in before Mincord could finish it.");
+        assert_eq!(stopped(gone), Progress::Expired);
+        assert_eq!(stopped(Stopped::Expired.into()), Progress::Expired);
+        assert_eq!(
+            stopped(Stopped::Cancelled.into()),
+            Progress::Failed(Stopped::Cancelled.to_string())
+        );
+        // Anything else is still worth showing as it is.
+        let refused = anyhow::Error::new(Refused(
+            mincord_discord::api::StatusCode::INTERNAL_SERVER_ERROR,
+        ));
+        assert!(matches!(stopped(refused), Progress::Failed(_)));
+    }
 }

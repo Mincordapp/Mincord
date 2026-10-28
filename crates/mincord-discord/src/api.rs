@@ -3,7 +3,9 @@
 use std::sync::RwLock;
 
 use anyhow::{Context, Result, anyhow, bail};
-use reqwest::{Client, Method, RequestBuilder, Response, StatusCode, header};
+use reqwest::{Client, Method, RequestBuilder, Response, header};
+// The status `Refused` carries, for callers telling refusals apart.
+pub use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -293,16 +295,38 @@ impl Api {
     /// enough; until then, and if the page can't be read, Mincord sends the
     /// last one it knew.
     pub async fn learn_build_number(&self) {
+        if client::knows_build_number() {
+            return;
+        }
+        self.read_web_app().await;
+    }
+
+    /// Loads the web client's page as a browser about to sign in would,
+    /// whether or not the build number is already known.
+    ///
+    /// Cloudflare's bot-management cookie lasts half an hour, and a browser
+    /// renews it by being on the site at all. Mincord reads this page once a
+    /// run, so a sign-in hours into a run would go without it, and a request
+    /// to trade a ticket is the last one that should look like a machine
+    /// Discord hasn't seen. Reading it again first renews that cookie.
+    pub async fn warm_cookies(&self) {
+        self.read_web_app().await;
+    }
+
+    /// Reads the web client's page, keeping its build number and whatever
+    /// cookies its answer sets.
+    async fn read_web_app(&self) {
         /// The page sets it near the top; the whole page is about 75 KiB.
         const READ: usize = 256 << 10;
-        if client::test_server().is_some() || client::knows_build_number() {
+        if client::test_server().is_some() {
             return;
         }
         let read = async {
-            let mut response = self
-                .http
-                .get(WEB_APP)
-                .header(header::ACCEPT, "text/html")
+            let mut page_request = self.http.get(WEB_APP);
+            for (name, value) in client::page_headers() {
+                page_request = page_request.header(*name, *value);
+            }
+            let mut response = page_request
                 .send()
                 .await?
                 .error_for_status()?;
@@ -326,10 +350,14 @@ impl Api {
     fn request(&self, method: Method, path: &str) -> RequestBuilder {
         // Only the API gets the client's description, as in the web client;
         // it changes through a run, so each request makes it again.
-        let request = self
+        let mut request = self
             .http
             .request(method, format!("{}{path}", self.base))
             .header("X-Super-Properties", client::super_properties());
+        // The rest of what the browser Mincord claims to be would send.
+        for (name, value) in client::api_headers() {
+            request = request.header(*name, *value);
+        }
         // A request sent again once confirmed carries what confirmed it.
         let request = match mfa::token() {
             Some(confirmed) => request.header("X-Discord-MFA-Authorization", confirmed),

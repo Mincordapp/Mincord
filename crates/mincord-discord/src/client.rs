@@ -189,6 +189,67 @@ pub fn super_properties() -> String {
     STANDARD.encode(properties().to_string())
 }
 
+/// Where the web client runs, which its requests name as their origin.
+pub const WEB_ORIGIN: &str = "https://discord.com";
+/// The page the web client's own requests come from.
+const WEB_REFERER: &str = "https://discord.com/channels/@me";
+/// What a Firefox asks for, in the order it sends.
+const LANGUAGES: &str = "en-US,en;q=0.5";
+
+/// This machine's time zone, as the web client reads it from the browser;
+/// UTC when the system doesn't say.
+fn timezone() -> &'static str {
+    static ZONE: OnceLock<String> = OnceLock::new();
+    ZONE.get_or_init(|| iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".to_owned()))
+}
+
+/// The headers an API request carries besides the client's description.
+///
+/// A request from the web client is a fetch from a page on discord.com, so
+/// Firefox puts an origin, a referrer and the `Sec-Fetch-*` set on it, and
+/// the client adds its own locale and time zone. Mincord says it is that
+/// Firefox in `User-Agent` and in the properties, and a request making that
+/// claim without the headers the browser would have added doesn't match it.
+/// Discord weighs that against a sign-in, and answers one it doubts with a
+/// captcha, so the two have to agree. Discord takes the locale from
+/// `X-Discord-Locale` first and `Accept-Language` after; see
+/// https://docs.discord.food/reference.
+pub fn api_headers() -> &'static [(&'static str, &'static str)] {
+    static HEADERS: OnceLock<[(&'static str, &'static str); 10]> = OnceLock::new();
+    HEADERS.get_or_init(|| {
+        [
+            ("Accept", "*/*"),
+            ("Accept-Language", LANGUAGES),
+            ("Origin", WEB_ORIGIN),
+            ("Referer", WEB_REFERER),
+            ("Sec-Fetch-Dest", "empty"),
+            ("Sec-Fetch-Mode", "cors"),
+            ("Sec-Fetch-Site", "same-origin"),
+            ("X-Debug-Options", "bugReporterEnabled"),
+            ("X-Discord-Locale", "en-US"),
+            ("X-Discord-Timezone", timezone()),
+        ]
+    })
+}
+
+/// The headers the browser puts on the one request that loads the web
+/// client's page, which is a navigation rather than a fetch. Discord and
+/// Cloudflare set the cookies that name this device on its answer, so this
+/// is the request that decides whether Discord has seen the machine before.
+pub fn page_headers() -> &'static [(&'static str, &'static str); 6] {
+    &[
+        (
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        ),
+        ("Accept-Language", LANGUAGES),
+        ("Sec-Fetch-Dest", "document"),
+        ("Sec-Fetch-Mode", "navigate"),
+        ("Sec-Fetch-Site", "none"),
+        ("Upgrade-Insecure-Requests", "1"),
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,6 +281,25 @@ mod tests {
         assert_eq!(bits & 0x0080_1010_0810_0800_2081_0040_0100_0800, 0);
         assert_eq!(launch_id().len(), 36);
         assert_eq!(&launch_id()[14..15], "4");
+    }
+
+    #[test]
+    fn asks_as_the_browser_it_claims_to_be() {
+        let headers = api_headers();
+        let value = |name: &str| {
+            headers
+                .iter()
+                .find(|(header, _)| *header == name)
+                .map(|(_, value)| *value)
+        };
+        assert_eq!(value("Origin"), Some(WEB_ORIGIN));
+        assert_eq!(value("Sec-Fetch-Site"), Some("same-origin"));
+        // The locale Discord reads first agrees with the properties'.
+        assert_eq!(value("X-Discord-Locale"), Some("en-US"));
+        assert_eq!(properties()["system_locale"], "en-US");
+        assert!(!value("X-Discord-Timezone").unwrap_or_default().is_empty());
+        // The page is a navigation, not a fetch from one.
+        assert!(page_headers().contains(&("Sec-Fetch-Mode", "navigate")));
     }
 
     #[test]

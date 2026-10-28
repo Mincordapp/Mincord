@@ -170,9 +170,10 @@ by invite](servers.md#joining-by-invite) shows Discord's captchas the same way.
 A ticket doesn't outlast many captchas. Discord forgets one soon after the
 phone approves it, and answers a late trade with 404, which the general
 wording would call a missing message or channel; `Api::remote_auth_login`
-names it instead, and says to scan the code again. So a captcha Discord
-doesn't take costs the sign-in: the second one it asks for arrives after the
-ticket is already gone.
+names it instead. So a captcha Discord doesn't take costs the sign-in: the
+second one it asks for arrives after the ticket is already gone. There is no
+way on from a lost ticket but a new code, so `discord_link` reports that 404
+as expiry, and the dialog shows one rather than stopping at an error.
 
 Discord weighs a solution against the request that carries it, and a captcha
 solved in a browser on this machine beside a request claiming another system
@@ -180,6 +181,30 @@ reads as a machine worth asking again. So `client.rs` says where Mincord
 really runs: `platform()` gives the `os` and `os_version` of
 `X-Super-Properties` and the platform part of the Firefox `User-Agent`, for
 Windows, macOS or Linux, rather than one system everywhere.
+
+The request has to match that claim the rest of the way down. A call from the
+web client is a fetch from a page on discord.com, so the browser puts an
+origin, a referrer, `Accept-Language` and the `Sec-Fetch-*` set on it, and the
+client adds `X-Discord-Locale`, this machine's `X-Discord-Timezone` and
+`X-Debug-Options`. A request saying it is that Firefox while carrying none of
+them doesn't read as one. `client::api_headers` sends them on every API
+request beside `X-Super-Properties`, and `client::page_headers` sends what a
+navigation carries on the request that loads the web client's page -- the
+request whose answer sets the cookies naming this device, so the one that
+decides whether Discord has seen the machine before.
+
+A browser has the site open before anyone signs in, which keeps those cookies
+fresh; Cloudflare's bot-management cookie lasts half an hour. Mincord reads
+the page once a run, so a sign-in hours into a run would go without it, and
+trading a ticket is the last request that should look like a machine Discord
+hasn't seen. `Api::warm_cookies` reads the page again as linking starts,
+whether or not the build number is already known.
+
+When Discord does ask, `captcha_key` says why: `captcha-required` for a first
+ask, `invalid-input-response` or `response-already-used-error` when it turned
+a solution down. `Captcha` keeps it and the log names it on each ask, because
+a second ask that says a solution was refused and a second ask for a fresh
+challenge call for different fixes.
 
 Which devices Discord knows is the cookies it and Cloudflare set on their
 first answer (`cookies.rs`), kept in the data folder. Mincord's folder isn't

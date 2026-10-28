@@ -27,6 +27,11 @@ const MOST: usize = 64 * 1024;
 /// A captcha Discord asked for, from its answer's body.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Captcha {
+    /// What Discord said was wrong, from `captcha_key`: `captcha-required`
+    /// for a first ask, and `invalid-input-response` or
+    /// `response-already-used-error` when it turned a solution down. Only
+    /// for the log; see https://docs.discord.food/topics/captcha-handling.
+    pub keys: Vec<String>,
     pub sitekey: String,
     /// Data the challenge must carry, when Discord sends it.
     pub rqdata: Option<String>,
@@ -37,7 +42,7 @@ pub struct Captcha {
 
 impl fmt::Display for Captcha {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("Discord asked for a captcha")
+        write!(formatter, "Discord asked for a captcha ({})", self.keys.join(", "))
     }
 }
 
@@ -51,7 +56,16 @@ impl Captcha {
             return None;
         }
         let text = |key: &str| body[key].as_str().map(str::to_owned);
+        let keys = body["captcha_key"]
+            .as_array()
+            .map(|keys| {
+                keys.iter()
+                    .map(|key| key.as_str().unwrap_or_default().to_owned())
+                    .collect()
+            })
+            .unwrap_or_default();
         Some(Self {
+            keys,
             sitekey: text("captcha_sitekey")?,
             rqdata: text("captcha_rqdata"),
             rqtoken: text("captcha_rqtoken"),
@@ -296,6 +310,7 @@ mod tests {
     #[test]
     fn reads_discords_captcha() {
         let captcha = captcha();
+        assert_eq!(captcha.keys, ["captcha-required"]);
         assert_eq!(captcha.rqdata.as_deref(), Some("data</script>"));
         assert_eq!(
             captcha.headers("solved"),

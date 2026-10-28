@@ -41,13 +41,33 @@ pub fn keep_in(file: PathBuf) {
     }
     match std::fs::File::open(&file) {
         Ok(saved) => match cookie_store::serde::json::load(std::io::BufReader::new(saved)) {
-            Ok(store) => *JAR.store.lock().unwrap() = store,
+            Ok(store) => {
+                // The count alone: a cookie's value identifies the device.
+                tracing::info!(kept = store.iter_any().count(), "read the saved Discord cookies");
+                *JAR.store.lock().unwrap() = store;
+            }
             Err(error) => tracing::warn!(%error, "could not read the saved Discord cookies"),
         },
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            tracing::info!("no saved Discord cookies; this looks like a new device");
+        }
         Err(error) => tracing::warn!(%error, "could not open the saved Discord cookies"),
     }
     *JAR.file.lock().unwrap() = Some(file);
+}
+
+/// Whether Discord's device cookies are in the jar, so a request goes out
+/// as a machine it has seen before. A sign-in from an unknown device is the
+/// one Discord answers with a captcha.
+pub fn device_known() -> bool {
+    let Ok(url) = Url::parse("https://discord.com/api/v9/users/@me") else {
+        return false;
+    };
+    JAR.store
+        .lock()
+        .unwrap()
+        .get_request_values(&url)
+        .any(|(name, _)| name == "__dcfduid")
 }
 
 impl Jar {

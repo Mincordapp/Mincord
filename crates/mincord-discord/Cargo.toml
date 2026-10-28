@@ -44,6 +44,9 @@ tokio-tungstenite = { version = "0.26", default-features = false, features = ["c
 tracing.workspace = true
 tracing-subscriber.workspace = true
 url.workspace = true
+# This machine's time zone, for the header the web client sends. Already in
+# the tree through chrono, so it adds nothing to the build.
+iana-time-zone = "0.1"
 # Links Mincord's libwebrtc archive, whose libopus calls use.
 webrtc-sys = "=0.3.35"
 

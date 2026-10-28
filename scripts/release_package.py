@@ -35,8 +35,14 @@ def license_file(path):
 
 def names_home(contents):
     """Whether a binary names this machine's home folder, as Rust's panic
-    messages and C's asserts do when built without scripts/release-env."""
-    return any(str(Path.home()).encode(encoding) in contents for encoding in ("utf-8", "utf-16-le"))
+    messages and C's asserts do when built without scripts/release-env.
+
+    A leak is always a path under the home folder, so the name has to be
+    followed by a separator: a build whose home is /root would otherwise
+    read num-integer's src/roots.rs as its own."""
+    home = str(Path.home())
+    return any((home + separator).encode(encoding) in contents
+               for encoding in ("utf-8", "utf-16-le") for separator in ("/", "\\"))
 
 
 def source_snapshot(metadata, base, temporary, destination):
