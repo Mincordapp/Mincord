@@ -441,9 +441,33 @@ pub struct ChatServer {
     /// A Discord Community server, whose channel list opens Browse
     /// Channels.
     pub community: bool,
+    /// The status badge beside its name, where it earns one.
+    pub badge: ServerBadge,
     /// The room ids of the channels this account pinned to the top of its
     /// channel list, a Discord server's, in the order they show there.
     pub pinned: Vec<String>,
+}
+
+/// The badge beside a server's name, as Discord's client shows one: the
+/// highest status it earns, and nothing for a server that earns none.
+/// Discovery and Community are the two a server reaches for itself, so a
+/// boost level repaints those on the boost gradient; the rest Discord
+/// grants, and a boost doesn't change them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum ServerBadge {
+    #[default]
+    None,
+    /// Mincord's own server, which only Mincord badges.
+    Mincord,
+    /// Only Discord's staff may join it.
+    Employee,
+    Partnered,
+    Verified,
+    /// Listed in Discord's directory.
+    Public,
+    PublicBoosted,
+    Community,
+    CommunityBoosted,
 }
 
 /// Where a Discord channel or category goes in its server's channel list.

@@ -1,5 +1,5 @@
 import { ScrollView } from "scrollview.slint";
-import { Theme, Tip, Middle, Label } from "theme.slint";
+import { Theme, Tip, Middle, Label, ServerBadge, ServerBadges } from "theme.slint";
 
 // A labelled action. Primary is coral, danger red, ghost transparent until hovered.
 export component ActionButton inherits Rectangle {
@@ -229,6 +229,35 @@ export global PictureStore {
     pure callback frames(string, int) -> [image];
     pure callback delays(string, int) -> [int];
     callback request(string);
+}
+
+// A server's status badge, beside its name as Discord's client draws it:
+// a Verified check, a Partnered handshake, Discord's staff hammer, a
+// Discovery globe or a Community house, and Mincord's own mark on its own
+// server. A server without one takes no room.
+export component ServerBadgeIcon inherits Rectangle {
+    in property <ServerBadge> badge;
+    in property <length> size: 20px;
+    /// What the badge says, for screen readers and for a tooltip.
+    out property <string> label: ServerBadges.label(root.badge);
+    width: root.badge == ServerBadge.none ? 0px : root.size;
+    height: root.badge == ServerBadge.none ? 0px : root.size;
+    if root.badge != ServerBadge.none: Image {
+        width: root.size;
+        height: root.size;
+        image-fit: contain;
+        accessible-role: image;
+        accessible-label: root.label;
+        source:
+            root.badge == ServerBadge.mincord ? @image-url("icons/DNative/Guild/Mincord server.png")
+            : root.badge == ServerBadge.employee ? @image-url("icons/DNative/Guild/Employee server.png")
+            : root.badge == ServerBadge.partnered ? @image-url("icons/DNative/Guild/Partnered server.png")
+            : root.badge == ServerBadge.verified ? @image-url("icons/DNative/Guild/Verified server.png")
+            : root.badge == ServerBadge.public-boosted ? @image-url("icons/DNative/Guild/Public server boosted.png")
+            : root.badge == ServerBadge.public-server ? @image-url("icons/DNative/Guild/Public server not boosted.png")
+            : root.badge == ServerBadge.community-boosted ? @image-url("icons/DNative/Guild/Community server boosted.png")
+            : @image-url("icons/DNative/Guild/Community server.png");
+    }
 }
 
 // A person's picture, or a round initial in their own tint until it arrives;

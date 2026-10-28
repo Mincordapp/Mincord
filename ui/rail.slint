@@ -1,6 +1,6 @@
 import { ListView } from "scrollview.slint";
-import { Theme, Tip, Middle, Label } from "theme.slint";
-import { Avatar, Picture, PictureStore, StatusText, VoiceSpot } from "controls.slint";
+import { Theme, Tip, Middle, Label, ServerBadge, ServerBadges } from "theme.slint";
+import { Avatar, Picture, PictureStore, StatusText, VoiceSpot, ServerBadgeIcon } from "controls.slint";
 import { DiscordBadge } from "discord.slint";
 import { PersonRow, LivePill } from "voice.slint";
 
@@ -25,6 +25,10 @@ export struct ServerRow {
     tint: color,
     /// A closed folder's first four servers.
     preview: [FolderServer],
+    /// Its status badge, which its tooltip shows beside its name, and the
+    /// channel list's head shows beside the server's. Not the mention count
+    /// `badge` above; a server earns this one from Discord.
+    emblem: ServerBadge,
     /// An unread DM above the servers, as in Discord: `id` is its room's,
     /// `picture-url` its avatar or group icon, and `badge` its unread messages.
     dm: bool,
@@ -133,6 +137,8 @@ export component RailItem inherits Rectangle {
     in property <bool> unread;
     /// Mentions waiting, at the bottom right as in Discord; empty for none.
     in property <string> badge;
+    /// The server's status badge, shown in its tooltip; see `ServerRow`.
+    in property <ServerBadge> emblem;
     /// In a call here, shown at the top right.
     in property <bool> call;
     /// Marks a Discord server.
@@ -221,11 +227,13 @@ export component RailItem inherits Rectangle {
             changed has-hover => {
                 if self.has-hover {
                     Tip.text = root.tip;
+                    Tip.badge = root.emblem;
                     Tip.side = 1;
                     Tip.x = root.absolute-position.x + root.width;
                     Tip.y = root.absolute-position.y + root.height / 2;
                 } else if Tip.text == root.tip {
                     Tip.text = "";
+                    Tip.badge = ServerBadge.none;
                 }
             }
         }
@@ -323,6 +331,7 @@ component FolderItem inherits Rectangle {
             changed has-hover => {
                 if self.has-hover {
                     Tip.text = root.tip;
+                    Tip.badge = ServerBadge.none;
                     Tip.side = 1;
                     Tip.x = root.absolute-position.x + root.width;
                     Tip.y = root.absolute-position.y + root.height / 2;
@@ -688,11 +697,14 @@ component CategoryHeading inherits Rectangle {
 export component ServerHeader inherits Rectangle {
     in property <string> name;
     in property <bool> open;
+    /// Its status badge, before the name as Discord's client puts it.
+    in property <ServerBadge> badge;
     callback clicked;
     border-radius: 6px;
     background: touch.has-hover || root.open ? Theme.hover : transparent;
     accessible-role: button;
-    accessible-label: root.name + ", server menu";
+    property <string> badge-label: ServerBadges.label(root.badge);
+    accessible-label: (root.badge-label != "" ? root.badge-label + ", " : "") + root.name + ", server menu";
     accessible-action-default => { root.clicked(); }
     keys := FocusScope {
         key-pressed(event) => {
@@ -705,6 +717,9 @@ export component ServerHeader inherits Rectangle {
     }
     HorizontalLayout {
         padding-left: 8px; padding-right: 8px; spacing: 6px; alignment: start;
+        if root.badge != ServerBadge.none: Middle {
+            ServerBadgeIcon { badge: root.badge; size: 20px; }
+        }
         Text {
             text: root.name; font-size: 16px; font-weight: 700; color: Theme.text;
             vertical-alignment: center; overflow: elide;
@@ -802,6 +817,7 @@ export component ServerRail inherits Rectangle {
                         + (server.badge != "" ? ", " + server.badge + " mentions" : server.unread ? ", unread" : "");
                     tip: server.unavailable ? server.name + " (unavailable in a Discord outage)" : server.discord && root.matrix-build ? server.name + " (Discord)" : server.name;
                     selected: server.selected; unread: server.unread; badge: server.badge; discord: server.discord;
+                    emblem: server.emblem;
                     call: server.call;
                     opacity: server.unavailable ? 0.5 : 1;
                     clicked => { root.navigate-server(server.id); }

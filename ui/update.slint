@@ -1,0 +1,162 @@
+// The update offer: a card in the window's bottom corner saying a newer
+// Mincord is out, which downloads and installs it. Only the Windows build
+// updates itself; see src/update.rs.
+import { Theme } from "theme.slint";
+import { ActionButton } from "controls.slint";
+
+// Where the offer has got to. `offered` until the person takes it, then
+// `downloading` while the installer comes down, `installing` for the
+// moment between handing it the installer and Mincord closing, and
+// `failed` with a reason when either went wrong.
+export enum UpdateStage { offered, downloading, installing, failed }
+
+// A dotted frame, which Slint's borders don't draw: dots along each edge,
+// the corners left clear so the card still reads as one rounded shape.
+// The dots are made when the card opens and go with it.
+component DottedEdge inherits Rectangle {
+    in property <brush> tint;
+    in property <length> dot: 2px;
+    /// From one dot to the next.
+    in property <length> step: 7px;
+    /// How far in from each corner the dots start, for the radius.
+    in property <length> inset: 14px;
+    property <int> columns: max(0, floor((root.width - 2 * root.inset) / root.step));
+    property <int> rows: max(0, floor((root.height - 2 * root.inset) / root.step));
+    for column in root.columns: Rectangle {
+        x: root.inset + column * root.step;
+        width: root.dot; height: root.dot; border-radius: root.dot / 2;
+        background: root.tint;
+    }
+    for column in root.columns: Rectangle {
+        x: root.inset + column * root.step; y: root.height - root.dot;
+        width: root.dot; height: root.dot; border-radius: root.dot / 2;
+        background: root.tint;
+    }
+    for row in root.rows: Rectangle {
+        y: root.inset + row * root.step;
+        width: root.dot; height: root.dot; border-radius: root.dot / 2;
+        background: root.tint;
+    }
+    for row in root.rows: Rectangle {
+        x: root.width - root.dot; y: root.inset + row * root.step;
+        width: root.dot; height: root.dot; border-radius: root.dot / 2;
+        background: root.tint;
+    }
+}
+
+// How far the download has got, under the card's text.
+component UpdateProgress inherits Rectangle {
+    in property <float> progress;
+    in property <brush> tint;
+    height: 4px;
+    border-radius: 2px;
+    background: Theme.overlay.with-alpha(0.12);
+    Rectangle {
+        x: 0;
+        width: parent.width * clamp(root.progress, 0, 1);
+        border-radius: parent.border-radius;
+        background: root.tint;
+        animate width { duration: 160ms; easing: ease-out; }
+    }
+}
+
+export component UpdateCard inherits Rectangle {
+    in property <UpdateStage> stage;
+    /// The version on offer, and the one running.
+    in property <string> version;
+    in property <string> running;
+    /// What the release notes say, as the release page shows them; empty
+    /// for a release without any.
+    in property <string> notes;
+    /// "12.4 of 57.0 MB" while it downloads, and why it failed when it did.
+    in property <string> detail;
+    in property <float> progress;
+    callback update();
+    callback dismiss();
+    callback open-notes();
+
+    /// The blue the card is washed in, and the dots around it. Every theme
+    /// has its own link blue, so the card follows the theme rather than
+    /// carrying a colour of its own.
+    property <color> tint: Theme.link;
+    property <bool> busy: root.stage == UpdateStage.downloading || root.stage == UpdateStage.installing;
+
+    width: 340px;
+    height: body.preferred-height;
+    border-radius: 14px;
+    // Semi-transparent blue over the window, with the panel beneath it so
+    // the text stays legible on any theme.
+    background: Theme.panel.with-alpha(0.92);
+    drop-shadow-blur: 24px; drop-shadow-color: #00000066; drop-shadow-offset-y: 6px;
+
+    Rectangle {
+        border-radius: parent.border-radius;
+        background: @linear-gradient(160deg, root.tint.with-alpha(0.26) 0%, root.tint.with-alpha(0.10) 100%);
+    }
+    DottedEdge { tint: root.tint.with-alpha(0.75); inset: parent.border-radius; }
+
+    body := VerticalLayout {
+        padding: 16px; spacing: 10px;
+        HorizontalLayout {
+            spacing: 10px;
+            VerticalLayout {
+                alignment: start;
+                Image {
+                    source: @image-url("icons/download.svg");
+                    width: 18px; height: 18px; colorize: root.tint;
+                }
+            }
+            VerticalLayout {
+                spacing: 2px;
+                Text {
+                    text: root.stage == UpdateStage.failed ? "Couldn't get Mincord " + root.version
+                        : root.stage == UpdateStage.installing ? "Installing Mincord " + root.version
+                        : root.stage == UpdateStage.downloading ? "Downloading Mincord " + root.version
+                        : "Mincord " + root.version + " is out";
+                    color: Theme.text; font-size: 15px; font-weight: 700; wrap: word-wrap;
+                }
+                Text {
+                    text: root.detail != "" ? root.detail
+                        : root.stage == UpdateStage.installing ? "Mincord closes and opens again."
+                        : "You're on " + root.running + ".";
+                    color: Theme.secondary; font-size: 13px; wrap: word-wrap;
+                }
+            }
+        }
+        // The notes the release carries, kept short; the release page has
+        // the rest.
+        if root.stage == UpdateStage.offered && root.notes != "": Text {
+            text: root.notes;
+            color: Theme.secondary; font-size: 13px; wrap: word-wrap;
+            // Three lines of notes at this size, then the page.
+            max-height: 58px;
+        }
+        if root.busy: UpdateProgress {
+            // An install has no progress of its own to show, so the bar
+            // stays full rather than dropping back.
+            progress: root.stage == UpdateStage.installing ? 1.0 : root.progress;
+            tint: root.tint;
+        }
+        HorizontalLayout {
+            spacing: 8px; alignment: end;
+            if root.stage == UpdateStage.offered || root.stage == UpdateStage.failed: ActionButton {
+                text: "What's new"; ghost: true; small: true;
+                clicked => { root.open-notes(); }
+            }
+            if !root.busy: ActionButton {
+                text: root.stage == UpdateStage.failed ? "Not now" : "Later";
+                ghost: true; small: true;
+                clicked => { root.dismiss(); }
+            }
+            if root.stage == UpdateStage.downloading: ActionButton {
+                text: "Cancel"; ghost: true; small: true;
+                clicked => { root.dismiss(); }
+            }
+            if !root.busy: ActionButton {
+                text: root.stage == UpdateStage.failed ? "Try again" : "Update";
+                primary: true; small: true;
+                clicked => { root.update(); }
+            }
+        }
+    }
+}

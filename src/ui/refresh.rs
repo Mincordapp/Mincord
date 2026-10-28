@@ -249,6 +249,7 @@ impl Adapter {
         if changes.selection && self.app.state.search_shown().is_none() {
             window.set_search_text(SharedString::default());
         }
+        self.updates.show(window);
         self.show_header(window);
         self.show_dm_tools(window);
         self.show_threads(window);
@@ -450,6 +451,18 @@ impl Adapter {
                 .unwrap_or_default()
                 .into(),
             Navigation::DirectMessages => SharedString::default(),
+        });
+        // Its status badge sits before its name, as Discord's client puts it.
+        window.set_header_badge(match &state.navigation {
+            Navigation::Server(id) => server_badge(
+                state
+                    .servers
+                    .iter()
+                    .find(|server| &server.id == id)
+                    .map(|server| server.badge)
+                    .unwrap_or_default(),
+            ),
+            Navigation::DirectMessages => ServerBadge::None,
         });
         window.set_header_invite(match &state.navigation {
             Navigation::Server(id) => self.app.header_choices(id).contains(&MenuChoice::Invite),
@@ -3721,7 +3734,24 @@ fn server_row(
         discord: server.discord,
         unavailable: server.unavailable,
         badge: count_badge(mentions),
+        emblem: server_badge(server.badge),
         ..Default::default()
+    }
+}
+
+/// A server's status badge as the window names it.
+fn server_badge(badge: mincord_core::chat::ServerBadge) -> ServerBadge {
+    use mincord_core::chat::ServerBadge as Earned;
+    match badge {
+        Earned::None => ServerBadge::None,
+        Earned::Mincord => ServerBadge::Mincord,
+        Earned::Employee => ServerBadge::Employee,
+        Earned::Partnered => ServerBadge::Partnered,
+        Earned::Verified => ServerBadge::Verified,
+        Earned::Public => ServerBadge::PublicServer,
+        Earned::PublicBoosted => ServerBadge::PublicBoosted,
+        Earned::Community => ServerBadge::Community,
+        Earned::CommunityBoosted => ServerBadge::CommunityBoosted,
     }
 }
 

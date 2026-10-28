@@ -21,10 +21,11 @@ import "fonts/AtkinsonHyperlegibleNext-ExtraBold.ttf";
 // Mincord's window. Its parts live beside it, by area: theme.slint, controls.slint,
 // discord.slint, voice.slint, rail.slint, composer.slint, messages.slint,
 // settings.slint, people.slint, friends.slint, dialogs.slint and sign-in.slint.
-import { Theme, Tip, ReactionHover, Middle, Popup, PopupMotion } from "theme.slint";
+import { Theme, Tip, ReactionHover, Middle, Popup, PopupMotion, ServerBadge, ServerBadges } from "theme.slint";
 import { TitleBar, ResizeEdges } from "title_bar.slint";
 import { GifPicker, GifTile, PickerTab } from "gifs.slint";
-import { ActionButton, IconButton, PingToggle, DeviceToggle, Avatar, TextField, MessagesSkeleton, ContextMenu, MenuItem, MenuRow, DeviceMenu, HeaderToggle, Banner, StatusText, StoredPicture } from "controls.slint";
+import { UpdateCard, UpdateStage } from "update.slint";
+import { ActionButton, IconButton, PingToggle, DeviceToggle, Avatar, TextField, MessagesSkeleton, ContextMenu, MenuItem, MenuRow, DeviceMenu, HeaderToggle, Banner, StatusText, StoredPicture, ServerBadgeIcon } from "controls.slint";
 import { PersonRow, CallLink, CallLinkCard, LinkTouch, SignalIcon, VoiceDock, StreamPip, CallInvite, JoinVoice, ParticipantGrid, CallControls, IncomingCall, SwitchDialog, InputLevel, ShareMenu, ShareScreen, VolumeMenu, Soundboard, SoundRow } from "voice.slint";
 import { ServerRow, RoomRow, StatusDot, ServerRail, ServerHeader, RoomList } from "rail.slint";
 import { StagedFile, StagedTile, Composer, MentionRow, MentionList, EmojiSuggestions, RequestBar } from "composer.slint";
@@ -152,6 +153,23 @@ export component MincordWindow inherits Window {
     /// account may invite to it.
     in property <string> header-server;
     in property <bool> header-invite;
+    /// That server's status badge, beside its name as in Discord;
+    /// `ServerBadge.none` for a server that earns none.
+    in property <ServerBadge> header-badge;
+    // A newer Mincord is out: the card in the bottom corner that downloads
+    // and installs it. Only the Windows build offers one; see src/update.rs.
+    in property <bool> update-shown;
+    in property <UpdateStage> update-stage;
+    in property <string> update-version;
+    in property <string> update-running;
+    in property <string> update-notes;
+    /// How far the download has got, or why it failed.
+    in property <string> update-detail;
+    in property <float> update-progress;
+    callback start-update();
+    /// Later, or Cancel while it downloads.
+    callback dismiss-update();
+    callback open-update-notes();
     /// The address of that server's banner, which shows above its name as in
     /// Discord; empty for a server without one.
     in property <string> header-banner;
@@ -1407,7 +1425,7 @@ export component MincordWindow inherits Window {
     public function copy-text(text: string) { clipboard.text = text; clipboard.select-all(); clipboard.copy(); clipboard.text = ""; }
     clipboard := TextInput { visible: false; width: 0px; height: 0px; }
     // A tooltip must not outlive the toolbar that showed it.
-    changed active-item => { Tip.text = ""; }
+    changed active-item => { Tip.text = ""; Tip.badge = ServerBadge.none; }
 
     // The member list is a second sidebar, on the right of the conversation.
     property <bool> members-docked: root.members-available && root.member-list && !root.search-open && !root.aside-docked;
@@ -1417,8 +1435,8 @@ export component MincordWindow inherits Window {
     // of its member list.
     property <bool> aside-docked: (root.aside-open || root.new-thread-open) && !root.search-open;
     // Rows remade under the pointer show their tooltip again; it goes with the screen.
-    changed friends-open => { Tip.text = ""; }
-    changed browse-open => { Tip.text = ""; }
+    changed friends-open => { Tip.text = ""; Tip.badge = ServerBadge.none; }
+    changed browse-open => { Tip.text = ""; Tip.badge = ServerBadge.none; }
     property <bool> profile-docked: root.profile-available && root.profile-panel && root.panel-profile-shown && !root.search-open && !root.aside-docked;
     // Search results take the place of the member list or the profile.
     property <length> docked-width: root.search-open ? 420px : root.aside-docked ? root.aside-shown : (root.members-docked ? 240px : 0px) + (root.profile-docked ? 300px : 0px);
@@ -1966,7 +1984,7 @@ export component MincordWindow inherits Window {
                                 if root.header-server == "": Text { x: 16px; width: parent.width - (root.dms-selected && !root.preview ? (root.discord-linked ? 88px : 56px) : 32px); text: root.sidebar-title; font-size: 16px; font-weight: 700; color: Theme.text; vertical-alignment: center; overflow: elide; }
                                 if root.header-server != "": server-header := ServerHeader {
                                     x: 8px; y: 8px; width: parent.width - 16px - (root.header-invite ? 32px : 0px); height: 32px;
-                                    name: root.sidebar-title; open: root.header-menu-open;
+                                    name: root.sidebar-title; open: root.header-menu-open; badge: root.header-badge;
                                     clicked => { root.open-header-menu(self.absolute-position.x, self.absolute-position.y + self.height + 6px); }
                                 }
                                 if root.header-server != "" && root.header-invite: IconButton {
@@ -3897,15 +3915,39 @@ export component MincordWindow inherits Window {
     if root.title-height > 0 && !root.window-maximized: ResizeEdges {
         resize-window(direction) => { root.resize-window(direction); }
     }
+    // Above the window, under the tooltip, and out of the way of the
+    // voice dock in the other corner.
+    if root.update-shown: UpdateCard {
+        x: root.width - self.width - 20px;
+        y: root.height - self.height - 20px;
+        stage: root.update-stage;
+        version: root.update-version;
+        running: root.update-running;
+        notes: root.update-notes;
+        detail: root.update-detail;
+        progress: root.update-progress;
+        update => { root.start-update(); }
+        dismiss => { root.dismiss-update(); }
+        open-notes => { root.open-update-notes(); }
+    }
     if Tip.text != "": Rectangle {
-        property <length> w: tip-text.preferred-width + 20px;
+        property <length> badge-width: Tip.badge == ServerBadge.none ? 0px : 18px + 6px;
+        property <length> w: tip-text.preferred-width + self.badge-width + 20px;
         property <length> h: 32px;
         x: Tip.side == 1 ? Tip.x + 10px : max(8px, min(root.width - self.w - 8px, Tip.x - self.w / 2));
         y: Tip.side == 1 ? Tip.y - self.h / 2 : Tip.side == 0 ? max(4px, Tip.y - self.h - 6px) : Tip.y + 6px;
         width: self.w; height: self.h;
         border-radius: 6px; background: Theme.tooltip;
         drop-shadow-blur: 12px; drop-shadow-color: #00000080; drop-shadow-offset-y: 3px;
-        tip-text := Text { text: Tip.text; color: Theme.text; font-size: 14px; font-weight: 700; }
+        HorizontalLayout {
+            padding-left: 10px; padding-right: 10px; spacing: 6px; alignment: start;
+            if Tip.badge != ServerBadge.none: Middle {
+                ServerBadgeIcon { badge: Tip.badge; size: 18px; }
+            }
+            Middle {
+                tip-text := Text { text: Tip.text; color: Theme.text; font-size: 14px; font-weight: 700; }
+            }
+        }
     }
     if Autoscroll.shown: AutoscrollMarker {}
 }

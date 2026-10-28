@@ -3106,6 +3106,7 @@ fn a_folder_on_the_rail_holds_its_servers_until_opened() {
             folder: folder.cloned(),
             hide_muted: false,
             community: false,
+            badge: mincord_core::chat::ServerBadge::None,
             pinned: Vec::new(),
         }
     };
@@ -3319,6 +3320,7 @@ fn friends_in_a_servers_voice_channel_show_where() {
         folder: None,
         hide_muted: false,
         community: false,
+        badge: mincord_core::chat::ServerBadge::None,
         pinned: Vec::new(),
     })];
     let rooms_by_id = state
@@ -3361,6 +3363,7 @@ fn a_call_shows_on_its_servers_icon_and_its_closed_folder() {
             folder: folder.cloned(),
             hide_muted: false,
             community: false,
+            badge: mincord_core::chat::ServerBadge::None,
             pinned: Vec::new(),
         }
     };
@@ -3841,6 +3844,48 @@ fn a_private_channel_carries_a_lock_and_the_banner_heads_the_channel_list() {
         .map(|row| row.name.to_string())
         .collect();
     assert_eq!(locked, ["secrets"], "only the one @everyone may not see");
+}
+
+#[test]
+#[cfg(feature = "discord")]
+fn a_servers_badge_heads_its_channel_list_and_rides_its_rail_tooltip() {
+    // Discord lists a partnered server as verified too, and its boost
+    // level doesn't repaint a badge Discord granted.
+    let (window, _adapter, _directory) = discord_server_window_changed(0, |server, _marks| {
+        server.verified = true;
+        server.partnered = true;
+        server.community = true;
+        server.premium_tier = 3;
+    });
+    let row = window
+        .get_servers()
+        .iter()
+        .find(|row| row.id == "discord:10")
+        .expect("the server's rail row");
+    assert_eq!(
+        row.emblem,
+        ServerBadge::Partnered,
+        "the rail's row carries it, for its tooltip"
+    );
+    assert_eq!(
+        window.get_header_badge(),
+        ServerBadge::None,
+        "until the server is open"
+    );
+    window.invoke_navigate_server("discord:10".into());
+    assert_eq!(window.get_header_badge(), ServerBadge::Partnered);
+
+    // A community server that no boost paid for wears the plain mark.
+    let (window, _adapter, _directory) = discord_server_window_changed(0, |server, _marks| {
+        server.community = true;
+    });
+    window.invoke_navigate_server("discord:10".into());
+    assert_eq!(window.get_header_badge(), ServerBadge::Community);
+
+    // An ordinary server wears none, and leaves the head as it was.
+    let (window, _adapter, _directory) = discord_server_window_changed(0, |_server, _marks| {});
+    window.invoke_navigate_server("discord:10".into());
+    assert_eq!(window.get_header_badge(), ServerBadge::None);
 }
 
 #[test]

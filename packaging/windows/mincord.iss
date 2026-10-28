@@ -80,3 +80,15 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupA
 
 [Run]
 Filename: "{app}\mincord.exe"; Description: "{cm:LaunchProgram,Mincord}"; Flags: nowait postinstall skipifsilent
+; Mincord updating itself runs this installer with /VERYSILENT and
+; /restartapp=1, and wants the new Mincord started once it is in place; the
+; line above is skipped in a silent run. See src/update.rs.
+Filename: "{app}\mincord.exe"; Flags: nowait postinstall skipifnotsilent; Check: RestartApp
+
+[Code]
+// Whether the person running this installer asked for Mincord to be started
+// again afterwards: /restartapp=1, which only Mincord's own updater passes.
+function RestartApp: Boolean;
+begin
+  Result := ExpandConstant('{param:restartapp|0}') = '1';
+end;

@@ -63,6 +63,7 @@ fn connected() -> Application {
             folder: None,
             hide_muted: false,
             community: false,
+            badge: crate::chat::ServerBadge::None,
             pinned: Vec::new(),
         }],
     }));
@@ -137,6 +138,7 @@ fn locked_channels_show_without_asking_for_their_messages() {
             folder: None,
             hide_muted: false,
             community: false,
+            badge: crate::chat::ServerBadge::None,
             pinned: Vec::new(),
         }],
     }));
@@ -5216,6 +5218,7 @@ fn a_matrix_room_divider_follows_its_read_receipt_once_loaded() {
             folder: None,
             hide_muted: false,
             community: false,
+            badge: crate::chat::ServerBadge::None,
             pinned: Vec::new(),
         }],
     }));

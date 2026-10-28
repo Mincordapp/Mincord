@@ -39,6 +39,33 @@ and turns it only while the rail item is pointed at or open, as Discord's
 client does. Held still it shows the first frame, and no other frame is
 decoded, so a rail of animated servers costs what a rail of pictures costs.
 
+## A server's badge
+
+A server that has earned a status from Discord wears its badge before its
+name in the channel list's head, and in its tooltip on the rail, as
+Discord's client shows one. Only the highest it earns shows, in this
+order: Discord's own staff servers (`INTERNAL_EMPLOYEE_ONLY`), Partnered
+(`PARTNERED`), Verified (`VERIFIED`), listed in the directory
+(`DISCOVERABLE`), and Community (`COMMUNITY`). Discord lists a partnered
+server as verified too, so Partnered has to be asked about first.
+Discovery and Community are the two a server reaches for itself, so a
+server with a boost level wears the boosted picture of those: the same
+mark on the boost gradient. A badge Discord granted doesn't change with
+boosts.
+
+Mincord's own server, `1564730315698864139`, wears Mincord's mark in place
+of whatever Discord gives it. That's the one badge Discord doesn't decide,
+and `discord::MINCORD_SERVER` names it.
+
+`ready.rs` reads the features onto `Server::partnered`, `discoverable` and
+`employee`, beside the `verified` that is either Verified or Partnered and
+which [giving a server away](server-settings.md) already asks about.
+`discord::badge` picks the one badge from them and the boost level, and
+`ChatServer::badge` carries it to the window, where `ServerBadgeIcon` in
+`ui/controls.slint` draws it from `ui/icons/DNative/Guild/`. Against the
+fake, `POST /_control/guild {"features": ["VERIFIED"], "premium_tier": 2}`
+gives "Server" one.
+
 ## Private channels
 
 A channel the server's @everyone role may not see is private, and its row

@@ -59,6 +59,7 @@ mod shell;
 mod theme;
 mod tiles;
 mod title_bar;
+mod update;
 
 use callbacks::bind_callbacks;
 use messages::*;
@@ -202,6 +203,9 @@ pub fn run(
             }
         });
     }
+    // A newer Mincord is asked about a little after the window opens, so
+    // the first frames aren't competing with the request.
+    update::Updates::watch(Rc::downgrade(&adapter));
     let shell = shell::Shell::new(window, adapter.clone(), notice, gpu);
     if hidden {
         shell.start_in_tray();
@@ -1471,6 +1475,8 @@ struct Adapter {
     window: slint::Weak<MincordWindow>,
     away: away::Away,
     call_timer: call_timer::CallTimer,
+    /// Whether a newer Mincord is out, and the card that installs it.
+    updates: update::Updates,
     /// Ticks ActivityClock while a profile on screen times an activity.
     activity_clock: slint::Timer,
     navigation: Navigation,
@@ -1728,6 +1734,7 @@ impl Adapter {
                 window: window.as_weak(),
                 away: away::Away::default(),
                 call_timer: call_timer::CallTimer::default(),
+                updates: update::Updates::default(),
                 activity_clock: slint::Timer::default(),
                 navigation: Navigation::default(),
                 forwarding: false,

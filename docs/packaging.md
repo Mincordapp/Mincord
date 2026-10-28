@@ -103,6 +103,53 @@ make the same file, and the release carries one. A prerelease is never
 releases, and takes a nightly AppImage to the latest stable release, not the
 next nightly.
 
+## Updating in place on Windows
+
+The Windows build updates itself; nothing else does. A Linux release is an
+AppImage with a `.zsync` file, which AppImageUpdate and Gear Lever follow,
+or a package pacman owns, and a self-updater there would fight whatever
+installed it. `update::SUPPORTED` is what says which build this is.
+
+Twenty seconds after the window opens, and every six hours a running
+Mincord stays open, it asks GitHub for
+`/repos/mincord/mincord/releases/latest`
+([`src/update.rs`](../src/update.rs)). A release counts when it is not a
+prerelease, its tag names a later version than this build, and it carries
+the `-windows-x64-setup.exe` asset. Versions compare as three numbers and
+a suffix, which orders a nightly before the release it is named for, as
+[nightlies](#nightly-releases) and pacman order it. Nothing is downloaded
+until the person asks, so a release they say Later to costs that one
+request, and a release waved away isn't offered again until Mincord next
+starts.
+
+The card in the window's bottom corner ([`ui/update.slint`](../ui/update.slint))
+offers it. Update downloads the same installer the releases page carries,
+into `updates/` beside Mincord's data, written to the file as it arrives
+rather than held in memory: an installer is around 57 MiB. It goes to a
+`.part` file first and is moved into place whole, so an interrupted
+download is never run. The bar moves every half percent, and moves the
+card's own properties rather than refreshing the window, since the
+installer comes down in hundreds of chunks. Cancel aborts the task, which
+drops the request with it.
+
+Then Mincord runs the installer with `/VERYSILENT /SUPPRESSMSGBOXES
+/NORESTART /NOCANCEL /restartapp=1` and quits a moment later. It quits
+rather than letting `CloseApplications=force` close it: Mincord goes on
+running in the tray with its window shut, so a close request wouldn't end
+it, and Windows won't replace a running executable. `/restartapp=1` is a
+switch of Mincord's own, which `[Code]`'s `RestartApp` in
+`packaging/windows/mincord.iss` reads and a `[Run]` entry with
+`skipifnotsilent` acts on; the wizard's own "Launch Mincord" is
+`skipifsilent`, so only one of the two ever fires. The installer is the
+per-user one, so none of this asks for administrator rights.
+
+`MINCORD_NO_UPDATE`, set to anything, stops Mincord asking at all, for a
+development build that shouldn't reach GitHub.
+
+The check runs against the real GitHub, so there's no fake for it. What
+decides an offer is apart from the request, in `update::offer`, and tested
+there.
+
 ## The app icon
 
 `packaging/icon.svg` is Mincord's icon: the logo in coral with its message in

@@ -52,6 +52,39 @@ export global Theme {
     out property <duration> quick: 120ms;
 }
 
+// The badge beside a server's name, as Discord's client shows one: the
+// highest status the server earns, and `none` for one that earns none.
+// A server that earns Discovery or Community and has a boost level wears
+// the boosted picture, the same mark on the boost gradient; the badges
+// Discord grants don't change with boosts. `ServerBadgeIcon` in
+// controls.slint draws them.
+export enum ServerBadge {
+    none,
+    mincord,
+    employee,
+    partnered,
+    verified,
+    public-server,
+    public-boosted,
+    community,
+    community-boosted,
+}
+
+// What each badge says, for screen readers and for the tooltips that name
+// one. Here rather than on the icon, so a caller that draws no icon can
+// still name the badge.
+export global ServerBadges {
+    pure public function label(badge: ServerBadge) -> string {
+        return badge == ServerBadge.mincord ? "Mincord server"
+            : badge == ServerBadge.employee ? "Discord staff server"
+            : badge == ServerBadge.partnered ? "Partnered server"
+            : badge == ServerBadge.verified ? "Verified server"
+            : badge == ServerBadge.public-server || badge == ServerBadge.public-boosted ? "Public server"
+            : badge == ServerBadge.community || badge == ServerBadge.community-boosted ? "Community server"
+            : "";
+    }
+}
+
 // One tooltip for the whole window, drawn above everything else.
 export global Tip {
     in-out property <string> text;
@@ -59,6 +92,8 @@ export global Tip {
     in-out property <length> y;
     /// 0 above the anchor, 1 to its right, 2 below it.
     in-out property <int> side;
+    /// The badge drawn before the text, for a server's tooltip on the rail.
+    in-out property <ServerBadge> badge;
 }
 
 // The reaction whose tooltip shows, by message item and key, as Discord's

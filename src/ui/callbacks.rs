@@ -2,6 +2,28 @@
 
 use super::*;
 
+/// The update card in the bottom corner: taking the offer, waving it away
+/// and the releases page. See src/ui/update.rs.
+fn bind_updates(window: &MincordWindow, adapter: &Rc<RefCell<Adapter>>) {
+    let state = adapter.clone();
+    let weak = window.as_weak();
+    window.on_start_update(move || {
+        let Some(window) = weak.upgrade() else { return };
+        let mut adapter = state.borrow_mut();
+        super::update::take(&mut adapter);
+        adapter.refresh(&window);
+    });
+    let state = adapter.clone();
+    let weak = window.as_weak();
+    window.on_dismiss_update(move || {
+        let Some(window) = weak.upgrade() else { return };
+        let mut adapter = state.borrow_mut();
+        super::update::wave_away(&mut adapter);
+        adapter.refresh(&window);
+    });
+    window.on_open_update_notes(super::update::open_notes);
+}
+
 pub(super) fn bind_callbacks(window: &MincordWindow, adapter: &Rc<RefCell<Adapter>>) {
     super::games::bind(window, adapter);
     super::gifs::bind(window, adapter);
@@ -10,6 +32,7 @@ pub(super) fn bind_callbacks(window: &MincordWindow, adapter: &Rc<RefCell<Adapte
     super::server_settings::bind(window, adapter);
     super::channel_settings::bind(window, adapter);
     super::title_bar::bind(window, adapter);
+    bind_updates(window, adapter);
     // UI bindings can request images while refresh borrows the adapter.
     // Deliver their requests in one batch after the current UI work.
     let pending = Rc::new(RefCell::new(HashSet::new()));

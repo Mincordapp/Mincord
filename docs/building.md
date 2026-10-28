@@ -474,6 +474,14 @@ Typed text never enters the log. Future errors must use fixed event
 names and safe classifications rather than raw protocol responses or SDK Debug
 output.
 
+## Update checks
+
+The Windows build asks GitHub for a newer release twenty seconds after the
+window opens and every six hours after that; see
+[packaging](packaging.md#updating-in-place-on-windows). `MINCORD_NO_UPDATE`,
+set to anything, stops it asking, which keeps a development build off
+GitHub. No other build asks.
+
 ## Initial resource measurement
 
 After a `measure` build with the release's features (see

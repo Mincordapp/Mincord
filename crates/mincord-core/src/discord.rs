@@ -24,11 +24,14 @@ use tokio::{
 
 #[cfg(feature = "discord")]
 use crate::{
-    chat::{self, ChatRoom, ChatServer, Event, VoicePerson},
+    chat::{self, ChatRoom, ChatServer, Event, ServerBadge, VoicePerson},
     network::Network,
 };
 
 pub(crate) const PREFIX: &str = "discord:";
+/// Mincord's own Discord server, which wears Mincord's badge in place of
+/// whatever Discord grants it.
+pub const MINCORD_SERVER: &str = "1564730315698864139";
 /// Discord channels kept after closing, so going back to one shows it at
 /// once, and of each, the newest messages kept. Decoded previews use one
 /// eight MiB cache across these channels and come back from disk after eviction.
@@ -869,9 +872,42 @@ fn server_rooms(
         folder: None,
         hide_muted: server.marks.notifications.hide_muted_channels,
         community: server.community,
+        badge: badge(server),
         pinned,
     };
     (rooms, server)
+}
+
+/// The badge beside a server's name: the highest status it earns, as
+/// Discord's client picks one, with Mincord's own server above them all.
+/// Discovery and Community are the two a server reaches for itself, so
+/// those are the two a boost level repaints; the rest Discord grants.
+#[cfg(feature = "discord")]
+fn badge(server: &MarkedServer) -> ServerBadge {
+    let boosted = server.premium_tier > 0;
+    if server.id == MINCORD_SERVER {
+        ServerBadge::Mincord
+    } else if server.employee {
+        ServerBadge::Employee
+    } else if server.partnered {
+        ServerBadge::Partnered
+    } else if server.verified {
+        ServerBadge::Verified
+    } else if server.discoverable {
+        if boosted {
+            ServerBadge::PublicBoosted
+        } else {
+            ServerBadge::Public
+        }
+    } else if server.community {
+        if boosted {
+            ServerBadge::CommunityBoosted
+        } else {
+            ServerBadge::Community
+        }
+    } else {
+        ServerBadge::None
+    }
 }
 
 /// A thread as it lists under `parent`, its channel's room.
@@ -1160,6 +1196,78 @@ mod tests {
                 ("31", "Talk"),
                 ("22", "Games")
             ]
+        );
+    }
+
+    #[test]
+    fn a_server_wears_the_highest_badge_it_earns() {
+        let badge = |boosted: bool, change: fn(&mut Server)| {
+            let mut server = Server {
+                id: "10".into(),
+                name: "Server".into(),
+                premium_tier: u8::from(boosted),
+                ..Default::default()
+            };
+            change(&mut server);
+            super::badge(&MarkedServer::from(server))
+        };
+        // Discord's own grants outrank what a server reaches for itself,
+        // and a boost doesn't repaint them.
+        assert_eq!(
+            badge(false, |server| server.employee = true),
+            ServerBadge::Employee
+        );
+        assert_eq!(
+            badge(true, |server| {
+                server.partnered = true;
+                // Discord lists a partnered server as verified too.
+                server.verified = true;
+                server.community = true;
+            }),
+            ServerBadge::Partnered,
+            "Partnered over Verified, and a boost leaves it alone"
+        );
+        assert_eq!(
+            badge(false, |server| server.verified = true),
+            ServerBadge::Verified
+        );
+        // Discovery and Community are the two a boost repaints, and a
+        // discoverable server is a community one too.
+        assert_eq!(
+            badge(false, |server| {
+                server.discoverable = true;
+                server.community = true;
+            }),
+            ServerBadge::Public
+        );
+        assert_eq!(
+            badge(true, |server| {
+                server.discoverable = true;
+                server.community = true;
+            }),
+            ServerBadge::PublicBoosted
+        );
+        assert_eq!(
+            badge(false, |server| server.community = true),
+            ServerBadge::Community
+        );
+        assert_eq!(
+            badge(true, |server| server.community = true),
+            ServerBadge::CommunityBoosted
+        );
+        assert_eq!(badge(true, |_| {}), ServerBadge::None, "an ordinary server");
+        // Mincord's own server wears Mincord's mark, whatever Discord says.
+        let mincord = Server {
+            id: MINCORD_SERVER.into(),
+            name: "Mincord".into(),
+            premium_tier: 3,
+            verified: true,
+            community: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            super::badge(&MarkedServer::from(mincord)),
+            ServerBadge::Mincord
         );
     }
 

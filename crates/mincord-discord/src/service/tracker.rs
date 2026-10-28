@@ -500,6 +500,9 @@ impl Tracker {
                 known.default_level = update.default_level;
                 known.forwarding_disabled = update.forwarding_disabled;
                 known.verified = update.verified;
+                known.partnered = update.partnered;
+                known.discoverable = update.discoverable;
+                known.employee = update.employee;
                 known.community = update.community;
                 self.sort_servers();
                 true

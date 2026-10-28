@@ -163,6 +163,17 @@ pub struct Server {
     /// Verified or Partnered, which Discord's client won't give away.
     #[serde(default)]
     pub verified: bool,
+    /// Partnered with Discord, a feature it lists as `PARTNERED`. A
+    /// partnered server is [`Self::verified`] too, and its badge wins.
+    #[serde(default)]
+    pub partnered: bool,
+    /// Listed in Discord's directory, a feature it lists as `DISCOVERABLE`.
+    #[serde(default)]
+    pub discoverable: bool,
+    /// Only Discord's own staff may join it, a feature it lists as
+    /// `INTERNAL_EMPLOYEE_ONLY`.
+    #[serde(default)]
+    pub employee: bool,
     /// A Community server, where the channel list may list only the
     /// channels this account follows; see
     /// [`crate::marked::MarkedServer::follows_only`].
@@ -1271,6 +1282,9 @@ pub fn server(guild: &Value) -> Option<Server> {
         unavailable: guild["unavailable"].as_bool().unwrap_or(false),
         forwarding_disabled: has("FORWARDING_DISABLED"),
         verified: has("VERIFIED") || has("PARTNERED"),
+        partnered: has("PARTNERED"),
+        discoverable: has("DISCOVERABLE"),
+        employee: has("INTERNAL_EMPLOYEE_ONLY"),
         community: has("COMMUNITY"),
         ..Default::default()
     };

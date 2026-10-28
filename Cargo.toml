@@ -17,7 +17,7 @@ default = ["desktop", "matrix", "discord"]
 # Each network is optional, so a build can carry Matrix, Discord or both.
 matrix = ["mincord-core/matrix"]
 discord = ["mincord-core/discord", "dep:qrcode"]
-desktop = ["dep:slint", "dep:mincord-ui", "dep:skia-safe", "dep:rfd", "dep:memmap2", "dep:emojis", "dep:webbrowser", "dep:i-slint-core", "dep:zbus", "dep:arboard", "dep:image", "dep:tempfile", "dep:wl-clipboard-rs", "dep:wayland-client", "dep:wayland-backend", "dep:wayland-protocols", "dep:ksni", "dep:windows-sys", "dep:i-slint-renderer-skia", "dep:futures-util", "dep:x11rb", "dep:xkeysym"]
+desktop = ["dep:slint", "dep:mincord-ui", "dep:skia-safe", "dep:rfd", "dep:memmap2", "dep:emojis", "dep:webbrowser", "dep:i-slint-core", "dep:zbus", "dep:arboard", "dep:image", "dep:tempfile", "dep:wl-clipboard-rs", "dep:wayland-client", "dep:wayland-backend", "dep:wayland-protocols", "dep:ksni", "dep:windows-sys", "dep:i-slint-renderer-skia", "dep:futures-util", "dep:x11rb", "dep:xkeysym", "dep:reqwest", "dep:rustls", "dep:tokio"]
 # The desktop app with a window that reloads ui/ on each save, for UI work;
 # see docs/building.md.
 live-preview = ["desktop", "mincord-ui/live-preview"]
@@ -50,6 +50,19 @@ arboard = { version = "3.6", default-features = false, features = ["image-data",
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"], optional = true }
 tempfile = { workspace = true, optional = true }
 tracing.workspace = true
+# Carries how far the update's download has got to the window; already in
+# the tree through the core. See src/ui/update.rs.
+tokio = { workspace = true, optional = true }
+# Asking GitHub for the latest release and downloading its installer; see
+# src/update.rs. The same client and features the Discord API uses, which
+# is already in the tree through it and through matrix-sdk. Only Windows
+# installs an update, but the check builds everywhere, so it is checked
+# and tested on every build.
+reqwest = { version = "0.13", default-features = false, features = ["http2", "rustls-no-provider", "stream"], optional = true }
+rustls = { workspace = true, optional = true }
+# The download's chunks, written to the file as they arrive, and the
+# push-to-talk portal's signals as a stream on Linux.
+futures-util = { workspace = true, optional = true }
 # The code the Discord phone app scans to link an account.
 qrcode = { version = "0.14", default-features = false, optional = true }
 
@@ -71,7 +84,6 @@ ksni = { version = "0.3.6", default-features = false, features = ["async-io", "b
 # The push-to-talk key in any app: the GlobalShortcuts portal's signals as a
 # stream, XInput 2's raw key events on X11, and keysym names for the portal's
 # trigger. All three are already in the tree, through zbus and winit.
-futures-util = { workspace = true, optional = true }
 x11rb = { version = "0.13.2", default-features = false, features = ["xinput"], optional = true }
 xkeysym = { version = "0.2.1", optional = true }
 

@@ -1145,6 +1145,7 @@ async fn room_index(client: &Client) -> RoomIndex {
             folder: None,
             hide_muted: false,
             community: false,
+            badge: crate::chat::ServerBadge::None,
             pinned: Vec::new(),
         });
     }
