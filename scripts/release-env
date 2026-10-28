@@ -1,0 +1,39 @@
+# Sourced before building a binary people download: `source scripts/release-env
+# TARGET`, then plain `cargo build --target TARGET`. Rust embeds source paths for panic messages, and C's __FILE__ ends
+# up in error messages too; they'd name the folders of the machine that built
+# it, its owner's home folder among them. These flags name none.
+# CARGO_ENCODED_RUSTFLAGS replaces .cargo/config.toml's rustflags, so a
+# target's own come along here.
+mincord_release_target=${1:?usage: source scripts/release-env TARGET}
+mincord_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+# Widest first: rustc and Clang take the last mapping that matches.
+mincord_maps=("$HOME=/home" "${CARGO_HOME:-$HOME/.cargo}=/cargo" "$mincord_root=/mincord")
+mincord_rust=()
+mincord_c=()
+for map in "${mincord_maps[@]}"; do
+  mincord_rust+=("--remap-path-prefix=$map")
+  mincord_c+=("-ffile-prefix-map=$map")
+done
+case "$mincord_release_target" in
+  x86_64-pc-windows-msvc)
+    # Match LiveKit's Windows runtime linkage, as .cargo/config.toml does.
+    mincord_rust=(-Ctarget-feature=+crt-static "${mincord_rust[@]}")
+    # cargo-xwin compiles C with clang-cl, which takes Clang's flags this way.
+    mincord_c=("${mincord_c[@]/#//clang:}") ;;
+  x86_64-unknown-linux-gnu) ;;
+  *) echo "scripts/release-env: no flags known for $mincord_release_target" >&2; return 2 ;;
+esac
+CARGO_ENCODED_RUSTFLAGS=$(IFS=$'\x1f'; printf '%s' "${mincord_rust[*]}")
+export CARGO_ENCODED_RUSTFLAGS
+# The cc crate reads only the first of CFLAGS_<target> and its fallbacks, and
+# `cargo xwin build` sets that one, so take its environment, which adds to
+# these rustflags, and add the C flags to what it sets.
+mincord_target_flags=${mincord_release_target//-/_}
+if [[ "$mincord_release_target" == *-windows-msvc ]]; then
+  eval "$(cargo xwin env --target "$mincord_release_target")"
+fi
+mincord_cflags="CFLAGS_$mincord_target_flags" mincord_cxxflags="CXXFLAGS_$mincord_target_flags"
+export "$mincord_cflags=${!mincord_cflags:-} ${mincord_c[*]}"
+export "$mincord_cxxflags=${!mincord_cxxflags:-} ${mincord_c[*]}"
+unset mincord_release_target mincord_root mincord_maps mincord_rust mincord_c map \
+  mincord_target_flags mincord_cflags mincord_cxxflags

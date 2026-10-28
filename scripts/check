@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Formatting, doc links, Clippy for every network combination, tests and
+# smoke runs.
+# Usage: scripts/check [--fast]
+# --fast builds with the `fast` profile, which local work uses. Each step
+# prints `=== step` and `rc=N` when it ends; its full output is in
+# target/check/. The script exits non-zero when any step failed, after running
+# them all.
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+if [[ -z "${IN_NIX_SHELL:-}" ]]; then
+  exec nix develop path:./nix --command "$0" "$@"
+fi
+
+profile=()
+profile_dir=debug
+case "${1:-}" in
+  --fast) profile=(--profile fast) profile_dir=fast ;;
+  "") ;;
+  *) echo "usage: scripts/check [--fast]" >&2; exit 2 ;;
+esac
+
+logs=target/check
+mkdir -p "$logs"
+rm -f "$logs"/*.log "$logs"/*.rc
+
+# Runs a step and prints its report.
+run() {
+  local name=$1
+  shift
+  local start=$SECONDS
+  "$@" >"$logs/$name.log" 2>&1
+  local rc=$?
+  echo "$rc" >"$logs/$name.rc"
+  local report
+  report="=== $name: $*"$'\n'"rc=$rc ($((SECONDS - start)) s)"
+  if [[ $rc -ne 0 ]]; then
+    # Rust's own diagnostics, without the C compilers' warnings around them,
+    # or the end of the output when there are none.
+    report+=$'\n'$(grep -E -A12 '^(error|warning)(\[|:)|^test .* FAILED|panicked at' "$logs/$name.log" | head -80 ||
+      tail -20 "$logs/$name.log")
+    report+=$'\n'"(full output: $logs/$name.log)"
+  fi
+  printf '%s\n' "$report"
+}
+
+clippy=(cargo clippy --locked "${profile[@]}" --all-targets)
+
+run fmt cargo fmt --all -- --check
+run doc-links scripts/check-doc-links
+# Without mincord-ui: --all-targets checks a library in test mode too, despite
+# its `test = false`, and that compiles the generated interface a second time
+# alongside the first. It still builds, as a dependency, and holds no code to
+# lint.
+run clippy "${clippy[@]}" --workspace --exclude mincord-ui -- -D warnings
+run test cargo test --locked "${profile[@]}" --workspace
+run build cargo build --locked "${profile[@]}" --workspace
+# The binary the build step made: `cargo run` would resolve the dependencies'
+# features for mincord alone, not the workspace, and compile it again.
+if [[ "$(cat "$logs/build.rc")" == 0 ]]; then
+  run smoke "target/$profile_dir/mincord" --smoke-test
+else
+  echo "=== smoke: skipped, as the build failed"
+fi
+
+# Each network alone, in the desktop and in the shared core with its tests.
+# These build mincord and mincord-core with other features than the steps
+# above. With feature-union, the crates below Slint resolve as in the first
+# Clippy step, so these reuse its check of the UI crate instead of compiling
+# their own; Clippy uplifts no binary, so they can share target/<profile>/.
+# They run after the steps above, not beside them: a compile of the UI crate
+# takes several GiB, and two or three at once ran the machine out of memory.
+run clippy-discord-only "${clippy[@]}" -p mincord -p mincord-core -p feature-union \
+  --no-default-features --features mincord/desktop,mincord/discord,mincord-core/discord -- -D warnings
+run clippy-matrix-only "${clippy[@]}" -p mincord -p mincord-core -p feature-union \
+  --no-default-features --features mincord/desktop,mincord/matrix,mincord-core/matrix -- -D warnings
+# The headless build, in a target directory of its own, so its binary stays
+# out of target/<profile>/.
+export CARGO_TARGET_DIR=target/check-combinations
+run clippy-headless "${clippy[@]}" -p mincord --no-default-features --features matrix,discord -- -D warnings
+run smoke-headless cargo run --locked "${profile[@]}" --no-default-features --features matrix,discord -- --smoke-test
+
+failed=()
+for name in fmt doc-links clippy test build smoke clippy-discord-only clippy-matrix-only \
+  clippy-headless smoke-headless; do
+  # A step without a result was skipped.
+  [[ ! -e "$logs/$name.rc" || "$(cat "$logs/$name.rc")" == 0 ]] || failed+=("$name")
+done
+if [[ ${#failed[@]} -gt 0 ]]; then
+  echo "FAILED: ${failed[*]}"
+  exit 1
+fi
+echo "All checks passed."

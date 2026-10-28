@@ -1,0 +1,27 @@
+[package]
+name = "mincord-ui"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+publish = false
+license = "GPL-3.0-or-later"
+description = "Mincord's compiled Slint interface, kept apart so Rust changes elsewhere do not recompile it"
+
+[lib]
+# No documentation examples run as tests: rustdoc would read the whole
+# crate on every `cargo test` for none.
+doctest = false
+# It has no tests either: a test target would compile the generated code a
+# second copy, several GiB of memory, beside the library.
+test = false
+
+[features]
+# Loads ui/ at runtime and reloads it on each save, for UI work; see
+# docs/building.md.
+live-preview = ["slint/live-preview"]
+
+[dependencies]
+slint.workspace = true
+
+[build-dependencies]
+slint-build = "=1.18.1"

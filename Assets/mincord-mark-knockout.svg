@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="153" height="155" viewBox="0 0 153 155" fill="none" role="img" aria-label="Mincord">
+  <title>Mincord</title>
+  <!--
+    The bars cut out of the bubble so whatever is behind shows through.
+    For a coloured panel or a photograph; use mincord-mark.svg everywhere
+    else, because a file with no mask renders identically in every tool.
+  -->
+  <mask id="mincord-message-ko" maskUnits="userSpaceOnUse" x="0" y="0" width="153" height="155">
+    <rect x="0" y="0" width="153" height="155" fill="#ffffff" />
+    <path d="M108.711 30.8785H36.2368C31.7895 30.8785 28.1842 35.3381 28.1842 40.8393C28.1842 46.3405 31.7895 50.8001 36.2368 50.8001H108.711C113.158 50.8001 116.763 46.3405 116.763 40.8393C116.763 35.3381 113.158 30.8785 108.711 30.8785Z" fill="#000000" />
+    <path opacity="0.45" d="M76.5 68.7295H36.2368C31.7895 68.7295 28.1842 73.1891 28.1842 78.6903C28.1842 84.1915 31.7895 88.6511 36.2368 88.6511H76.5C80.9473 88.6511 84.5526 84.1915 84.5526 78.6903C84.5526 73.1891 80.9473 68.7295 76.5 68.7295Z" fill="#000000" />
+  </mask>
+  <path d="M16.1053 0H136.895C141.166 0 145.263 2.09888 148.283 5.8349C151.303 9.57092 153 14.6381 153 19.9216V99.6079C153 104.891 151.303 109.959 148.283 113.695C145.263 117.431 141.166 119.529 136.895 119.529H68.4474L34.6263 153.396C30.6 157.381 24.1579 153.396 24.1579 147.42V119.529H16.1053C11.8339 119.529 7.73744 117.431 4.71712 113.695C1.6968 109.959 0 104.891 0 99.6079V19.9216C0 14.6381 1.6968 9.57092 4.71712 5.8349C7.73744 2.09888 11.8339 0 16.1053 0Z" fill="#ff6b4a" mask="url(#mincord-message-ko)" />
+</svg>

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Mincord
+GenericName=Chat
+Comment=Chat and voice for Matrix and Discord
+Exec=mincord
+Icon=io.github.mincord.Mincord
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+Keywords=Matrix;Discord;Voice;
+StartupWMClass=io.github.mincord.Mincord
