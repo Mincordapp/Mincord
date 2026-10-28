@@ -2919,6 +2919,13 @@ fn virtualized_lists_request_only_nearby_avatars() {
     window
         .global::<PictureStore>()
         .on_picture(|_, _| slint::Image::default());
+    // None of these server icons animates.
+    window
+        .global::<PictureStore>()
+        .on_frames(|_, _| ModelRc::default());
+    window
+        .global::<PictureStore>()
+        .on_delays(|_, _| ModelRc::default());
     window.global::<PictureStore>().on_request(move |url| {
         requests.borrow_mut().insert(url.to_string());
     });
@@ -3790,6 +3797,50 @@ fn discord_server_window_changed(
             ..Default::default()
         })));
     (window, adapter, directory)
+}
+
+#[test]
+#[cfg(feature = "discord")]
+fn a_private_channel_carries_a_lock_and_the_banner_heads_the_channel_list() {
+    use mincord_core::mincord_discord::ready::{Channel, Overwrite, permission::VIEW_CHANNEL};
+
+    let (window, _adapter, _directory) = discord_server_window_changed(0, |server, _marks| {
+        server.banner = Some("banner.png".into());
+        // @everyone kept out, this account let in through an overwrite of
+        // its own: private, and still readable.
+        server.text_channels.push(Channel {
+            id: "12".into(),
+            name: "secrets".into(),
+            position: 1,
+            parent: Some("4".into()),
+            overwrites: vec![
+                Overwrite {
+                    id: "10".into(),
+                    member: false,
+                    allow: 0,
+                    deny: VIEW_CHANNEL,
+                },
+                Overwrite {
+                    id: "1".into(),
+                    member: true,
+                    allow: VIEW_CHANNEL,
+                    deny: 0,
+                },
+            ]
+            .into(),
+            ..Default::default()
+        });
+    });
+    assert_eq!(window.get_header_banner(), "", "until the server is open");
+    window.invoke_navigate_server("discord:10".into());
+    assert_eq!(window.get_header_banner(), "banner.png");
+    let locked: Vec<_> = window
+        .get_rooms()
+        .iter()
+        .filter(|row| row.private)
+        .map(|row| row.name.to_string())
+        .collect();
+    assert_eq!(locked, ["secrets"], "only the one @everyone may not see");
 }
 
 #[test]

@@ -303,6 +303,10 @@ The window follows Discord's arrangement:
   isn't offered to the server's owner.
 - A sidebar, 240px by default and resizable by dragging its edge, with the
   server name, a filter, and uppercase TEXT CHANNELS and VOICE CHANNELS groups.
+  A Discord server with a banner shows it above its name, across the sidebar
+  at 16:9 and cropped to fit, fading into the sidebar at its foot; it turns
+  where the server's banner is animated. See
+  [the channel list's head](discord/servers.md#the-channel-lists-head).
   A Discord server's name, with a chevron beside it, opens a dropdown below
   it, as in Discord, and the chevron turns over while it's open; Enter, Space,
   the Menu key or Shift+F10 open it too. A person with a plus, on the
@@ -311,6 +315,10 @@ The window follows Discord's arrangement:
   (`Application::header_choices`), so the two can't disagree. A Discord
   channel list heads each category's channels with its name; a category
   without channels shows its heading alone, unless its permissions hide it.
+  A channel the server's @everyone role may not see carries a lock at the top
+  right of its glyph, as Discord marks a
+  [private channel](discord/servers.md#private-channels); one the account may
+  not read has the lock for its glyph instead, and is drawn faint.
   A right click on a heading, or the Menu key or Shift+F10 on it, opens the
   category's menu: Mark as read when its channels have messages to read,
   its mute and notification settings (below), Edit category and Delete

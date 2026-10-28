@@ -117,8 +117,12 @@ export type Group = Unread & { name?: string; with: string[]; messages?: Message
 
 export type Server = {
   name: string;
-  /** A picture file. */
+  /** A picture file. A GIF makes an animated icon, which Discord serves
+   *  under an `a_` hash and Mincord turns while the rail item is pointed at. */
   icon?: string;
+  /** A picture file for the banner its channel list shows above its name.
+   *  A GIF makes it animated, as an icon's does. */
+  banner?: string;
   /** A person's key, or "me", the default. */
   owner?: string;
   /** Highest first. @everyone is there anyway. */
@@ -145,8 +149,11 @@ export type Role = {
 export type Member = { who: string; roles?: string[]; nick?: string };
 
 export type Channel = TextChannel | VoiceChannel;
-export type TextChannel = Unread & { name: string; type?: "text"; topic?: string; messages?: Message[] };
-export type VoiceChannel = { name: string; type: "voice"; people?: InVoice[] };
+/** A channel @everyone may not see, which the account reaches anyway: its
+ *  row carries a lock, as Discord marks a private channel. */
+type Private = { private?: boolean };
+export type TextChannel = Unread & Private & { name: string; type?: "text"; topic?: string; messages?: Message[] };
+export type VoiceChannel = Private & { name: string; type: "voice"; people?: InVoice[] };
 
 export type InVoice = {
   who: string;

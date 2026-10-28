@@ -21,6 +21,39 @@ permissions hide. Members' roles are learned with their names; member list rows 
 `ChatMember::roles` share each member's list with them rather than copying
 it.
 
+## The channel list's head
+
+A server's channel list opens with its banner, where it has one
+(`BANNER`, boost level 2, or `ANIMATED_BANNER` at 3): the picture from
+`/banners/{guild}/{hash}`, drawn across the sidebar at 16:9 and cropped to
+fit, fading into the sidebar at its foot so the server's name below reads as
+part of the same sheet. `Server::banner` carries its address, `ChatServer`
+passes it on, and the window's `header-banner` names it, so it's asked for
+and kept like any other picture. A server without one opens at its name, as
+before.
+
+A server's icon is drawn on the rail. An animated one's hash starts with
+`a_`, and Discord serves it as a GIF (`ready::server_icon`, and
+`ready::banner` for a banner); Mincord decodes it as it decodes any animation
+and turns it only while the rail item is pointed at or open, as Discord's
+client does. Held still it shows the first frame, and no other frame is
+decoded, so a rail of animated servers costs what a rail of pictures costs.
+
+## Private channels
+
+A channel the server's @everyone role may not see is private, and its row
+carries a lock at the top right of its glyph, as Discord marks one. Mincord
+works it out as Discord's client does, in `Server::private`: @everyone's View
+Channel, with the channel's overwrite for that role applied, where a deny
+takes it away and an allow gives it back. One role kept out of a channel
+@everyone can see doesn't make it private, and a thread takes its channel's.
+
+This is apart from a channel this account may not read, which is
+[hidden](#permissions-and-roles) or listed faint with a lock for its glyph:
+a private channel is usually one a role lets this account in to, and it reads
+and writes there as in any other. Where it may not read it, the lock is
+already its glyph, so the badge isn't drawn twice.
+
 ## A server member's menu
 
 Right-clicking someone in a server channel's member list, or a message's

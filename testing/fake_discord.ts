@@ -1904,6 +1904,9 @@ function aliceMay(permission: number, user?: string): boolean {
 /** A channel's or category's change to the permissions of a role (type 0) or member (1). */
 type Overwrite = { id: string; type: number; allow: string; deny: string };
 
+/** View Channel, the bit a private channel takes from @everyone. */
+const VIEW_CHANNEL = 1n << 10n;
+
 /** Alice's permissions in a channel or category of "Server": the server's, then its
  * overwrites for @everyone, her roles and her, as Discord works them out. */
 function alicePermissionsIn(channel: { permission_overwrites: unknown[] }): bigint {
@@ -6638,11 +6641,16 @@ function postComponents(origin: string): string {
 // the CDN, voice states and streams. Its servers are plain objects, as the
 // fillers are, in `world`, which READY, member lists, op 8 and op 37 use in
 // place of "Server". See testing/fake_discord_env.ts for the format.
+// A server's `banner` heads its channel list, an `icon` or `banner` given as
+// a GIF comes back under an `a_` hash and is served as one, and a channel
+// marked `private` keeps @everyone out and lets Alice in, so Mincord lists
+// it with a lock.
 
 type EnvServer = {
   id: string;
   name: string;
   icon: string | null;
+  banner: string | null;
   owner: string;
   roles: (typeof serverRoles)[number][];
   channels: GuildChannel[];
@@ -6711,7 +6719,10 @@ function applyEnv({ env, dir }: { env: Env; dir: string }): World {
     if (path === null) return null;
     if (path === undefined) return fallback;
     const media = readMedia(dir, path);
-    const hash = `env${crc32(media.data).toString(16).padStart(8, "0")}`;
+    // Discord marks an animated picture's hash with `a_` and serves it as a
+    // GIF, which is how Mincord knows to ask for one.
+    const prefix = media.contentType === "image/gif" ? "a_" : "";
+    const hash = `${prefix}env${crc32(media.data).toString(16).padStart(8, "0")}`;
     uploadedPictures.set(hash, { type: media.contentType, data: media.data });
     return hash;
   };
@@ -6801,7 +6812,10 @@ function applyEnv({ env, dir }: { env: Env; dir: string }): World {
       })),
     ];
     const owner = who(spec.owner ?? "me");
-    const server: EnvServer = { id, name: spec.name, icon: pictureHash(spec.icon, null), owner: owner.id, roles, channels: [], members: new Map() };
+    const server: EnvServer = {
+      id, name: spec.name, icon: pictureHash(spec.icon, null), banner: pictureHash(spec.banner, null),
+      owner: owner.id, roles, channels: [], members: new Map(),
+    };
     for (const entry of spec.members ?? []) {
       const member = typeof entry === "string" ? { who: entry } : entry;
       const held = (member.roles ?? []).map((name) => {
@@ -6819,8 +6833,15 @@ function applyEnv({ env, dir }: { env: Env; dir: string }): World {
     const channel = (made: NonNullable<typeof spec.channels>[number], position: number, parent: string | null) => {
       const channelId = newId();
       channelGuild.set(channelId, server);
+      // @everyone kept out, Alice let in: a channel Mincord lists with a lock.
+      const overwrites: Overwrite[] = made.private
+        ? [
+            { id, type: 0, allow: "0", deny: String(VIEW_CHANNEL) },
+            { id: ALICE, type: 1, allow: String(VIEW_CHANNEL), deny: "0" },
+          ]
+        : [];
       if (made.type === "voice") {
-        server.channels.push(guildChannel(channelId, made.name, 2, position, parent, id));
+        server.channels.push(Object.assign(guildChannel(channelId, made.name, 2, position, parent, id), { permission_overwrites: overwrites }));
         for (const seat of made.people ?? []) {
           const user = who(seat.who);
           join(user);
@@ -6838,7 +6859,7 @@ function applyEnv({ env, dir }: { env: Env; dir: string }): World {
         }
         return;
       }
-      server.channels.push(Object.assign(guildChannel(channelId, made.name, 0, position, parent, id), { topic: made.topic ?? null }));
+      server.channels.push(Object.assign(guildChannel(channelId, made.name, 0, position, parent, id), { topic: made.topic ?? null, permission_overwrites: overwrites }));
       for (const message of made.messages ?? []) join(who(message.from));
       queue(channelId, made.messages, { ...made, dm: false }, server);
     };
@@ -6916,7 +6937,7 @@ function envGuild(server: EnvServer) {
   return {
     id: server.id,
     properties: {
-      id: server.id, name: server.name, owner_id: server.owner, icon: server.icon, banner: null, splash: null,
+      id: server.id, name: server.name, owner_id: server.owner, icon: server.icon, banner: server.banner, splash: null,
       description: null, features: [], preferred_locale: "en-US", verification_level: 0, default_message_notifications: 0,
       explicit_content_filter: 0, mfa_level: 0, nsfw_level: 0, premium_tier: 0,
       system_channel_id: channels.find((channel) => channel.type === 0)?.id ?? null, afk_channel_id: null, afk_timeout: 300,
@@ -7189,8 +7210,10 @@ const server = Bun.serve<SocketData>({
     if (req.method === "GET" && /^\/(app-icons\/\d+\/[a-z0-9]+\.png|app-assets\/\d+\/[a-z0-9]+\.png|spotify\/[A-Za-z0-9]+)$/.test(path)) {
       return new Response(picture(path), { headers: { "content-type": "image/png" } });
     }
-    if (req.method === "GET" && /^\/(icons\/\d+|avatars\/\d+|banners\/\d+|splashes\/\d+|role-icons\/\d+|embed\/avatars|guilds\/\d+\/users\/\d+\/(avatars|banners))\/[^/]+\.png$/.test(path)) {
-      const uploaded = uploadedPictures.get(path.slice(path.lastIndexOf("/") + 1, -".png".length));
+    if (req.method === "GET" && /^\/(icons\/\d+|avatars\/\d+|banners\/\d+|splashes\/\d+|role-icons\/\d+|embed\/avatars|guilds\/\d+\/users\/\d+\/(avatars|banners))\/[^/]+\.(png|gif)$/.test(path)) {
+      // An animated icon or banner is asked for as a GIF, under an `a_` hash.
+      const name = path.slice(path.lastIndexOf("/") + 1);
+      const uploaded = uploadedPictures.get(name.slice(0, name.lastIndexOf(".")));
       if (uploaded) return new Response(uploaded.data, { headers: { "content-type": uploaded.type } });
       return new Response(picture(path), { headers: { "content-type": "image/png" } });
     }

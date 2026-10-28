@@ -25,10 +25,22 @@ magick -size 256x256 gradient:'#43a047'-'#1b5e20' \
   -fill '#c5e1a5' -draw 'circle 128,150 128,80' \
   -fill '#f9a825' -draw 'circle 128,150 128,125' \
   -fill '#2e7d32' -draw 'polygon 128,40 150,90 106,90' -depth 8 -strip "$out/garden.png"
-magick -size 256x256 gradient:'#4fc3f7'-'#0277bd' \
-  -fill '#eceff1' -draw 'polygon 20,210 110,70 200,210' \
-  -fill '#90a4ae' -draw 'polygon 100,210 170,110 240,210' \
-  -fill '#ffee58' -draw 'circle 200,60 200,40' -depth 8 -strip "$out/hikers.png"
+# Weekend Hikers' icon moves: the sun climbs from behind the hills.
+# Discord serves an animated icon as a GIF, under a hash that starts
+# `a_`, and the rail turns it while it's pointed at.
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+frames=()
+for step in 0 1 2 3 4 5 6 7; do
+  sun=$((100 - step * 7))
+  magick -size 256x256 gradient:'#4fc3f7'-'#0277bd' \
+    -fill '#ffee58' -draw "circle 200,$sun 200,$((sun - 20))" \
+    -fill '#eceff1' -draw 'polygon 20,210 110,70 200,210' \
+    -fill '#90a4ae' -draw 'polygon 100,210 170,110 240,210' \
+    -depth 8 -strip "$work/hikers-$step.png"
+  frames+=("$work/hikers-$step.png")
+done
+magick -delay 12 -loop 0 "${frames[@]}" -layers optimize "$out/hikers.gif"
 # A wide banner for Maya's profile.
 magick -size 600x240 gradient:'#ce93d8'-'#4a148c' -depth 8 -strip "$out/maya-banner.png"
 

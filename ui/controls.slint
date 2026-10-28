@@ -223,6 +223,11 @@ export component DeviceToggle inherits Rectangle {
 export global PictureStore {
     in property <int> revision;
     pure callback picture(string, int) -> image;
+    /// An animated picture's frames and how long each shows, in
+    /// milliseconds; both empty for a still one. The frames decode as they
+    /// show, so asking for them costs nothing until one plays.
+    pure callback frames(string, int) -> [image];
+    pure callback delays(string, int) -> [int];
     callback request(string);
 }
 
@@ -432,13 +437,35 @@ export component Picture inherits Image {
     in property <image> still;
     in property <[image]> frames;
     in property <[int]> delays;
+    /// Whether this one turns at all. Off, it shows `still` and decodes no
+    /// frame, which is how the rail holds a server's animated icon until
+    /// it's pointed at.
+    in property <bool> playing: true;
     property <int> frame;
-    source: root.frames.length > 1 ? root.frames[root.frame] : root.still;
+    property <bool> moving: root.playing && root.frames.length > 1;
+    source: root.moving ? root.frames[root.frame] : root.still;
+    // Held still, it starts again from the top, as Discord's icons do.
+    changed moving => { root.frame = 0; }
     Timer {
-        running: root.frames.length > 1 && Motion.playing;
+        running: root.moving && Motion.playing;
         interval: max(20, root.delays[root.frame]) * 1ms;
         triggered => { root.frame = mod(root.frame + 1, root.frames.length); }
     }
+}
+
+// A picture the window keeps by address, asked for as it shows and turning
+// if it's animated: a server's banner, for one.
+export component StoredPicture inherits Picture {
+    in property <string> url;
+    still: PictureStore.picture(root.url, PictureStore.revision);
+    frames: PictureStore.frames(root.url, PictureStore.revision);
+    delays: PictureStore.delays(root.url, PictureStore.revision);
+    function request() {
+        if root.url != "" && root.still.width == 0 { PictureStore.request(root.url); }
+    }
+    init => { root.request(); }
+    changed url => { root.request(); }
+    changed still => { root.request(); }
 }
 
 // Stands in for something on its way, such as a picture or the messages,

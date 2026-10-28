@@ -162,7 +162,8 @@ they do in Discord.
 
 - **Servers, channels, DMs and group DMs**, all live, with member lists. Pin,
   mute or close a DM from its menu, leave a group DM, and accept or ignore
-  message requests.
+  message requests. A server's banner heads its channel list, its icon moves
+  on the rail if it's animated, and private channels carry a lock.
 - **Messages** you can send, reply to, edit, react to, pin, forward and attach
   files to, with Markdown, embeds, custom emoji, stickers and spoilers.
 - **Threads**: start one from a message, browse a channel's threads, join or

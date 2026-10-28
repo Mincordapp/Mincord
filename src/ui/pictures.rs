@@ -107,11 +107,24 @@ pub(super) fn refresh_avatar_sources(state: &AppState) {
 }
 
 pub(super) fn avatar_picture(url: &str) -> slint::Image {
-    let source =
-        AVATAR_SOURCES.with_borrow(|sources| sources.get(url).and_then(std::sync::Weak::upgrade));
+    let source = avatar_source(url);
     source.map_or_else(slint::Image::default, |source| {
         PREVIEWS.with_borrow_mut(|cache| cache.image(&source, false))
     })
+}
+
+/// An avatar's or server icon's frames and how long each shows, as
+/// [`animation`] gives them; both empty for a still picture, and for one
+/// that hasn't arrived. The frames decode as they show, so a picture asked
+/// for and never played costs nothing.
+pub(super) fn avatar_animation(url: &str) -> (ModelRc<slint::Image>, ModelRc<i32>) {
+    avatar_source(url)
+        .map(|source| animation(&source))
+        .unwrap_or_default()
+}
+
+fn avatar_source(url: &str) -> Option<Arc<Picture>> {
+    AVATAR_SOURCES.with_borrow(|sources| sources.get(url).and_then(std::sync::Weak::upgrade))
 }
 
 thread_local! {

@@ -624,7 +624,8 @@ impl Server {
             .iter()
             .find(|overwrite| !overwrite.member && overwrite.id == self.id)
         {
-            sees = (sees && everyone.deny & VIEW_CHANNEL == 0) || everyone.allow & VIEW_CHANNEL != 0;
+            sees =
+                (sees && everyone.deny & VIEW_CHANNEL == 0) || everyone.allow & VIEW_CHANNEL != 0;
         }
         sees
     }
@@ -1452,7 +1453,10 @@ pub fn custom_emoji(id: &str, animated: bool, size: u32) -> String {
 /// serves it as a GIF; the rest are PNGs.
 pub fn server_icon(guild: &str, hash: &str) -> String {
     let format = if animated(hash) { "gif" } else { "png" };
-    format!("{}/icons/{guild}/{hash}.{format}?size={PICTURE_SIZE}", cdn())
+    format!(
+        "{}/icons/{guild}/{hash}.{format}?size={PICTURE_SIZE}",
+        cdn()
+    )
 }
 
 /// Whether a picture's hash names an animated one, as Discord marks them.
@@ -1472,9 +1476,11 @@ pub fn avatar(user: &str, hash: Option<&str>) -> String {
     }
 }
 
-/// A profile or server banner, at the profile card's widest.
+/// A profile or server banner, at the profile card's widest. An animated
+/// one's hash carries the same `a_` an icon's does.
 pub fn banner(user: &str, hash: &str) -> String {
-    format!("{}/banners/{user}/{hash}.png?size=600", cdn())
+    let format = if animated(hash) { "gif" } else { "png" };
+    format!("{}/banners/{user}/{hash}.{format}?size=600", cdn())
 }
 
 /// A server's invite background, at the width its settings show it.
@@ -1741,7 +1747,7 @@ mod tests {
         let thread = Channel {
             id: "6".into(),
             parent: Some("5".into()),
-            thread: Some(Thread::default()),
+            thread: Some(Box::new(Thread::default())),
             ..Default::default()
         };
         assert!(server.private(&thread));

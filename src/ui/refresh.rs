@@ -440,6 +440,17 @@ impl Adapter {
             }
             _ => SharedString::default(),
         });
+        // A Discord server's banner heads its channel list, as in Discord.
+        window.set_header_banner(match &state.navigation {
+            Navigation::Server(id) => state
+                .servers
+                .iter()
+                .find(|server| &server.id == id)
+                .and_then(|server| server.banner.as_deref())
+                .unwrap_or_default()
+                .into(),
+            Navigation::DirectMessages => SharedString::default(),
+        });
         window.set_header_invite(match &state.navigation {
             Navigation::Server(id) => self.app.header_choices(id).contains(&MenuChoice::Invite),
             Navigation::DirectMessages => false,
@@ -662,6 +673,9 @@ impl Adapter {
                     picture_url: room.avatar.as_deref().unwrap_or_default().into(),
                     discord: room.direct && room.network == Network::Discord,
                     locked: room.locked || room.join_locked,
+                    // One this account may not read already has the lock for
+                    // its glyph, so the badge would say it twice.
+                    private: room.private && !room.locked,
                     person: room.person.is_some(),
                     pinned: if room.direct {
                         state.pinned.contains(&room.id)

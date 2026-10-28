@@ -1164,6 +1164,54 @@ mod tests {
     }
 
     #[test]
+    fn marks_private_channels_and_carries_the_servers_banner() {
+        use mincord_discord::ready::{Overwrite, permission::VIEW_CHANNEL};
+
+        let channel = |id: &str, private: bool| Channel {
+            id: id.into(),
+            name: id.into(),
+            overwrites: if private {
+                vec![Overwrite {
+                    // The @everyone role's id is the server's.
+                    id: "10".into(),
+                    member: false,
+                    allow: 0,
+                    deny: VIEW_CHANNEL,
+                }]
+            } else {
+                vec![]
+            }
+            .into(),
+            ..Default::default()
+        };
+        let server = Server {
+            id: "10".into(),
+            name: "Server".into(),
+            banner: Some("banner.png".into()),
+            roles: std::collections::HashMap::from([("10".into(), VIEW_CHANNEL)]).into(),
+            text_channels: vec![channel("21", false), channel("22", true)],
+            voice_channels: vec![channel("31", true)],
+            ..Default::default()
+        };
+        let snapshot = Snapshot {
+            servers: vec![MarkedServer::from(server)],
+            ..Default::default()
+        };
+        let (rooms, servers) = index(&snapshot, false);
+        let private = |name: &str| {
+            rooms
+                .iter()
+                .find(|room| room.name == name)
+                .expect(name)
+                .private
+        };
+        assert!(!private("21"));
+        assert!(private("22"), "a text channel @everyone may not see");
+        assert!(private("31"), "a voice channel too");
+        assert_eq!(servers[0].banner.as_deref(), Some("banner.png"));
+    }
+
+    #[test]
     fn lists_threads_under_their_channel() {
         let thread = |id: &str, parent: &str, joined, archived, access| {
             let thread = Channel {
