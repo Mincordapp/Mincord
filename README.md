@@ -1,443 +1,139 @@
 <p align="center">
-  <img src="packaging/icon.svg" width="96" height="96" alt="">
+  <img src="packaging/icon.svg" width="96" height="96" alt="Mincord icon">
 </p>
 
 <h1 align="center">Mincord</h1>
 
 <p align="center">
-  <a href="https://github.com/mincord/mincord/releases/latest"><img src="https://img.shields.io/github/v/release/mincord/mincord?label=beta&color=ff6b4a" alt="The latest release, a beta"></a>
-  <a href="#get-started"><img src="https://img.shields.io/badge/Windows%20%7C%20Linux-0078D4" alt="Windows and Linux"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/mincord/mincord?color=blue" alt="License: GPL 3.0"></a>
-  <a href="https://mincord.com/discord-invite"><img src="https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white" alt="Join the Mincord Discord server"></a>
+  <strong>A lightweight, native Discord client.</strong><br>
+  Built with Rust and Slint, with a focus on performance and a responsive desktop experience.
 </p>
 
 <p align="center">
-  <b>A Discord client without the web browser.</b><br>
-  About 30 MB of RAM idle, where Discord's app takes 720 MB (<a href="#measured-against-discord">measured as Vesktop</a>).
+  <a href="https://github.com/mincord/mincord/releases/latest">Latest release</a>
+  ·
+  <a href="https://github.com/mincord/mincord/issues">Report a bug</a>
+  ·
+  <a href="https://mincord.com/discord-invite">Community</a>
 </p>
 
 <p align="center">
-  Native app written in Rust · Voice, video and screen sharing
+  <a href="https://github.com/mincord/mincord/releases/latest"><img src="https://img.shields.io/github/v/release/mincord/mincord?label=release&color=5865F2" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mincord/mincord" alt="License"></a>
 </p>
 
-<p align="center">
-  <a href="#windows-10-and-11"><b>Download for Windows</b></a>
-  &nbsp;·&nbsp;
-  <a href="#linux"><b>Download for Linux</b></a>
-  &nbsp;·&nbsp;
-  <a href="https://mincord.com">mincord.com</a>
-</p>
-
-<p align="center">
-  <img src="docs/images/mincord.png" alt="Mincord showing a group DM, with the server list on the left, the conversation in the middle and its members on the right"><br>
-  <sub>A test account on a fake Discord server. Nobody in there said any of this, or endorses Mincord (sadly).</sub>
-</p>
-
-## Why?
-
-Discord's desktop app is a whole ass Chromium running Discord's website, and it
-sits at about 720 MB of RAM doing nothing (insane, I know right?!?). That
-annoyed me enough to write my own in Rust.
-
-Mincord does the same job (doing nothing) in about 30 MB. There's no browser
-engine anywhere in it or near it: it talks to Discord's API itself and draws its
-own window with [Slint](https://slint.dev) and Skia, like a game would. Your
-servers, DMs, friends, voice and GIFs are all there, and if you know Discord,
-you already know where everything is.
-
-It opens fast af, too. I timed both, from clicking the icon to reading my
-messages: Discord took 8 seconds on my Windows PC, Mincord took 0.22 seconds,
-because it shows the messages it saved last time and catches up while you read.
-
-## Measured against Discord
-
-<table>
-  <tr><th></th><th>Vesktop memory</th><th>Mincord memory</th><th>Vesktop CPU</th><th>Mincord CPU</th></tr>
-  <tr><td>Idle</td><td>724 MB</td><td>30 MB (−96%)</td><td>0.11%</td><td>0.015% (−86%)</td></tr>
-  <tr><td>Image-heavy channel</td><td>706 MB</td><td>41 MB (−94%)</td><td>0.17%</td><td>0.008% (−95%)</td></tr>
-  <tr><td>In a call</td><td>888 MB</td><td>44 MB (−95%)</td><td>0.46%</td><td>0.33% (−28%)</td></tr>
-  <tr><td>Sharing your screen¹</td><td>1,013 MB</td><td>113 MB (−89%)</td><td>2.15%</td><td>1.1% (−48%)</td></tr>
-  <tr><th></th><th colspan="2">Discord</th><th colspan="2">Mincord</th></tr>
-  <tr><td>Opening the app²</td><td colspan="2" align="center">8 s</td><td colspan="2" align="center">0.22 s (36× faster)</td></tr>
-</table>
-
-<details>
-<summary><b>About these numbers</b></summary>
-
-<br>
-
-Vesktop is basically Discord's own app: the same Discord web app, in the same
-Electron, with Vencord on top. So its numbers stand in for Discord's. CPU counts
-the whole processor as 100%.
-
-¹ Sharing a 1920×1080 monitor at 30 frames a second, while in the call.
-Mincord encodes on the graphics card when it has an encoder, here an NVIDIA
-RTX 3090 sending H264. Encoding on the processor with x264 instead, it takes
-2.5%, a little more than Vesktop.
-
-² From clicking the icon to reading your messages, against Discord's own app
-rather than Vesktop, timed on my Windows PC. Mincord shows the messages it saved
-last time and catches up while you read.
-
-Memory and CPU measured on 25 October 2026, and screen sharing on 27 October,
-all on the same PC. The machine, what "memory" counts and how each scenario ran
-are in [the measurements](docs/measurements/README.md). Your numbers will depend
-on how many servers and DMs you have.
-
-</details>
-
-## Features
-
-### The GIF picker
-
-My favorite part :p Your favorites live on disk as 40 KB clips, so they're
-there the moment it opens, and you're done sitting there cringing while the
-GOATed GIF loads.
-
-<img src="docs/images/features/gif-picker.webp" alt="The GIF picker opening on its favorites over #general, and one of them sent to the channel.">
-
-### Voice, cameras and Go Live
-
-Voice channels and DM calls, with mute, deafen, a volume for each person,
-noise suppression, echo removal, and a voice gate you can tune, or
-push-to-talk on any key you like, held in any app. Go Live, watch other
-people's streams, turn on your camera and play the soundboard. The call
-stays up while you read other channels.
-
-The noise suppression could be better, though. Know an open source one that
-does a better job? PLEASE tell me.
-
-<img src="docs/images/features/voice.webp" alt="A voice channel of seven people, two with their cameras on. One person's stream opens large, then the grid comes back.">
-
-### Forums and polls
-
-Browse a forum's posts as cards, with their tags, first message, top reaction
-and thumbnail, search them, post in them, and read one beside the forum. Vote
-in polls, watch the votes come in, make your own and end them early.
-
-<img src="docs/images/features/forum.webp" alt="A help forum's posts as cards; one opens beside the list with its replies, then closes.">
-
-<p align="center">
-  <img src="docs/images/features/poll.webp" width="640" alt="A movie night poll: an answer is picked and voted for, and the results fill in.">
-</p>
-
-### Themes
-
-Ten of them, Catppuccin and Tokyo Night among them, and Bonfire, which is
-Discord's own colors. Or make your own in the editor, and watch the window
-change as you type each color.
-
-<img src="docs/images/features/themes.webp" alt="The same channel in each of the ten built-in themes, one after another.">
-
-### Games on your profile
-
-The game you play, found among your running programs on Linux, Windows and
-macOS, Steam's and Wine's included, and on Linux the Rich Presence games send,
-with details, elapsed time, images and buttons.
-
-**Settings → Game activity** turns sharing on and off as Discord's own setting
-does, and names games Mincord doesn't know. See
-[game detection](docs/discord/people.md#game-detection) and
-[Rich Presence](docs/discord/people.md#linux-rich-presence).
-
-<p align="center">
-  <img src="docs/images/features/playing.webp" width="260" alt="A profile card saying Playing Deadlock, with the game's icon.">
-</p>
-
-### Running a server
-
-Server Settings with roles, emoji, stickers, bans, the audit log and the rest of
-the pages your roles let you use, and channel settings with their permissions.
-Make and edit channels and categories, invite people, hand out roles, change
-nicknames, time out, kick and ban. In voice, server mute, deafen and move
-people to another channel. Edit your server profile, and leave. Join a server
-by invite, from the + under your servers or a link in chat. Folders show up as
-they do in Discord.
-
-<p align="center">
-  <img src="docs/images/features/server-settings.webp" width="640" alt="Server Settings on a role's Display page: its name, a gold color picked, and its icon.">
-</p>
-
-### Everything else
-
-- **Servers, channels, DMs and group DMs**, all live, with member lists. Pin,
-  mute or close a DM from its menu, leave a group DM, and accept or ignore
-  message requests. A server's banner heads its channel list, its icon moves
-  on the rail if it's animated, and private channels carry a lock.
-- **Messages** you can send, reply to, edit, react to, pin, forward and attach
-  files to, with Markdown, embeds, custom emoji, stickers and spoilers.
-- **Threads**: start one from a message, browse a channel's threads, join or
-  leave one, and read it beside its channel.
-- **Search** a whole server with Discord's filters, and browse a channel's pins.
-- **Friends**: requests, adding by username, nicknames, notes, profile cards,
-  your status and custom status (custom emoji included). Block and ignore
-  people from their menu, hide what blocked people write, and unblock them from
-  a list in Settings.
-- **Notifications** that follow your Discord settings, muting for channels,
-  categories and servers, and unread markers.
-- **Soft sounds** for joining, leaving, muting and messages, in six sets.
-
-### Not there yet
-
-- Media channels.
-- Activities.
-- Making and changing server folders.
-- A server's form for new members, such as its rules, when you join. Mincord
-  sends you to Discord in your browser to fill it in.
-- Animated custom emoji in messages, which show their first frame.
-- Captchas, sort of. If Discord asks for one while you link or join a server,
-  Mincord opens it in your browser, but I haven't hit one against real
-  Discord yet, so who knows..
-
-Use Discord in a browser for these until then; it has all of it, and you have a
-browser open anyway. [The Discord plan](docs/discord/README.md) has the rest, in the
-order I'm working on it.
-
-It's a beta, and it's what I use for Discord every day, so it had better
-be usable. Still, there are rough edges; when you hit one,
-[open an issue](https://github.com/mincord/mincord/issues) and I'll fix it, or
-come hang out on the [Mincord Discord server](https://mincord.com/discord-invite)
-and tell me there.
-
-### Not for you?
-
-- [Vesktop](https://vesktop.dev) if you want plugins. Mincord has none yet
-  (they're coming, dw), and Vesktop ships with Vencord's.
-- [Ripcord](https://cancel.fm/ripcord/) if you want something even plainer.
-  It's native too, but closed source, and it does Slack on the side.
-
-## Will Discord ban me?
-
-> [!WARNING]
-> Probably not, but I can't promise it. Third-party clients, Mincord included,
-> are against Discord's Terms of Service. In practice Discord rarely bans anyone
-> for using one; the accounts that get banned are almost always spamming or
-> running automation. Mincord only does what you click, and keeps to the same
-> limits Discord's own app does.
->
-> If losing your account would be a disaster, don't use any third-party client,
-> this one or another. And don't post screenshots of it in a server whose
-> moderators might ban you for it. Mincord tells you all this again before it
-> shows the sign-in code.
-
-## Where your messages go
-
-Straight from your PC to Discord, or to your Matrix server. I don't run a
-Mincord server, so nothing in between could keep a copy (I'd have to pay for
-servers just to snoop on your DMs, and no thanks :D).
-
-- You link your account by scanning a QR code with Discord's phone app, so
-  Mincord never sees your password.
-- The login token stays in your system's credential store, and only ever goes
-  to Discord. Unlinking signs that session out and deletes it.
-- It sends no analytics or crash reports, and doesn't check for updates.
-- Pictures and GIFs load from wherever they're hosted, such as Discord or
-  Tenor.
-
-Don't want to take my word for it? Fair, the code's all right here.
-
-## Get started
-
-### Windows 10 and 11
-
-1. Download `Mincord-…-windows-x64-setup.exe` from the
-   [latest release](https://github.com/mincord/mincord/releases/latest).
-2. Run it. It installs just for you, with no administrator prompt. The
-   installer isn't signed yet, so SmartScreen may get nervous: choose **More
-   info**, then **Run anyway**.
-3. Mincord shows a QR code. On your phone, open Discord, go to **Settings →
-   Scan QR Code**, and point the camera at it.
-
-Rather skip the installer? The release has a portable ZIP too: extract it and
-double-click `mincord.exe`.
-
-Mincord starts with Windows and waits in the tray, so messages and calls still
-reach you. Untick that in the installer, or turn it off later in **Settings →
-Advanced**.
-
-### Linux
-
-It runs great on both X11 and Wayland, screen sharing too (Hyprland here).
-Every release has two packages, on the
-[latest release](https://github.com/mincord/mincord/releases/latest):
-
-- **AppImage**, `Mincord-…-x86_64.AppImage`, for any distro with glibc 2.39 or
-  newer, like Ubuntu 24.04, Fedora 40 or Debian 13. Make it executable
-  (`chmod +x`, or "Allow executing" in its properties) and run it. It adds
-  itself to your app menu, and uses your own graphics driver, Mesa or NVIDIA.
-- **Arch package**, `mincord-…-x86_64.pkg.tar.zst`. Install it with
-  `sudo pacman -U` and the file or its link. Rather build it yourself? The
-  [PKGBUILD](packaging/arch/PKGBUILD) builds the release's tag from source.
-
-Then link your account with the QR code, as on Windows.
-
-<details>
-<summary><b>With Nix</b></summary>
-
-<br>
-
-It's one command (pretty sure, anyway :D), and you get the same Discord-only
-app the releases ship, in your launcher:
-
-```sh
-nix profile add github:mincord/mincord#mincord
-```
-
-It compiles from source, so give it a few minutes. An older glibc and no Nix?
-Then [build it yourself](#build-it-yourself).
-
-</details>
-
-### macOS
-
-Not yet, sorry :( I'd love to make one, but I don't own an Apple machine to
-test it on.
-
-<details>
-<summary><b>Nightly builds</b></summary>
-
-<br>
-
-Want what's on `main` right now, without waiting for a release or building it
-yourself? Every now and then I put out a nightly build of the Discord-only app.
-They're on the [releases page](https://github.com/mincord/mincord/releases),
-marked **Pre-release**, newest first, each with a list of what changed:
-
-- **Windows:** the portable ZIP. Extract it and double-click `mincord.exe`.
-- **Linux:** the AppImage. `chmod +x` it and run it.
-- **Arch Linux:** the `.pkg.tar.zst`. Install it with `sudo pacman -U` and the
-  file or its link.
-
-They're untested between releases, so expect the odd rough edge.
-
-</details>
-
-## Other questions
-
-<details>
-<summary><b>What about Matrix?</b></summary>
-
-<br>
-
-Mincord started as a [Matrix](https://matrix.org) client, and Matrix still
-works: encrypted rooms, Spaces as servers, and voice channels over MatrixRTC, in
-the same window as Discord. The release is Discord-only for now, so
-[build it yourself](#build-it-yourself) to get both.
-
-After that I'd like Telegram, Signal, WhatsApp, Instagram and Messenger in there
-too. No clue when, but hopefully at some point :p
-
-</details>
-
-<details>
-<summary><b>Why not Tauri?</b></summary>
-
-<br>
-
-Tauri apps run a website too; they just borrow your system's web view instead
-of shipping their own Chromium. The browser is the exact thing I wanted gone, so
-hell no.
-
-</details>
-
-<details>
-<summary><b>Why draw on the processor?</b></summary>
-
-<br>
-
-It already keeps a 180 Hz monitor fed, and it takes less memory. There's a GPU
-renderer too, behind **Render with the GPU** in Settings, if you'd rather use
-that.
-
-</details>
-
-<details>
-<summary><b>Can I use my Vencord plugins?</b></summary>
-
-<br>
-
-Nope. They need a JavaScript runtime, and Mincord's insides look nothing like
-what they expect. Mincord will get plugins of its own, though, and open source
-Vencord ones could be ported once it does.
-
-</details>
-
-<details>
-<summary><b>How is it different from Serein?</b></summary>
-
-<br>
-
-Serein draws with wgpu, which costs more memory before you've opened a single
-channel. Mincord draws with Slint, on the processor by default (WAY lighter) or
-the GPU if you ask. It also does Matrix (from source, for now), DeepFilterNet
-noise suppression on top of RNNoise, voice gates, and the cached GIF picker.
-It's still missing a few things, like media channels and activities.
-
-</details>
-
-<details>
-<summary><b>Did you use AI to write it?</b></summary>
-
-<br>
-
-Yep. Opus 5.5 wrote most of the code, and 6.1 Sol and 6 Astra did adversarial
-review and helped with the nastiest bugs (networking protocols mixed with VP8 is
-a bit much for a side project :D). It wasn't one prompt and done, though. I've
-used it every day for weeks, profiled it with perf, read the code, and bent the
-UX to my muscle memory, so switching over hurts as little as it can.
-
-</details>
-
-## Build it yourself
-
-Mincord builds inside a pinned [Nix](https://nixos.org) environment, which
-brings the right Rust, Clang and native libraries. From the project folder:
-
-```sh
-# Try the UI without an account
+About
+Mincord is a desktop client project exploring a more lightweight way to use Discord without embedding a full browser engine. It is written in Rust and uses Slint for its interface.
+
+The aim is to keep the application responsive, reduce idle resource usage, and make everyday messaging and community features available in a native desktop environment.
+
+Mincord is under active development. Feature coverage and platform support may change between releases.
+Highlights
+- Native desktop interface built with Rust and Slint.
+- Performance-focused design intended to reduce idle memory and CPU overhead.
+- Messaging and communities, including servers, channels, direct messages and group conversations.
+- Voice and media features, including calls, camera support and screen sharing where supported.
+- Rich conversations with replies, reactions, attachments, embeds, stickers and Markdown.
+- Community tools for roles, channel configuration and moderation where permissions allow.
+- Personalisation through themes and appearance settings.
+- Local caching to make previously loaded content available quickly.
+- Open source with a buildable development workflow.
+Availability varies by platform and release. Check the release notes and project documentation for the current implementation status.
+Platform support
+Platform	Availability
+Windows 10 / 11	Release builds available
+Linux	Release builds available for supported environments
+macOS	Not currently supported by the project
+
+
+Linux package requirements can vary by distribution. Refer to the release assets and build documentation before installing.
+Installation
+Windows
+1. Open the latest releases.
+2. Download the Windows installer or portable archive.
+3. Run the installer, or extract the archive and launch the application.
+4. Follow the in-app instructions to connect your account.
+Windows may display a security warning if the installer is not signed. Only run software you have reviewed and obtained from a source you trust.
+Linux
+1. Visit the latest releases.
+2. Choose the package that matches your distribution and system.
+3. Follow the instructions for that package type, then launch Mincord.
+4. Complete the in-app account connection flow.
+For package-specific requirements and alternative installation methods, see the project documentation.
+Build from source
+Mincord uses a Nix development environment to provide its expected toolchain and native dependencies.
+# Run the UI preview without connecting an account
 nix develop path:./nix --command cargo run --locked -- --preview
 
-# Run it for real, with Discord and Matrix
+# Run the desktop client
 nix develop path:./nix --command cargo run --locked
 
-# Discord only, like the release
+# Build the Discord-only configuration
 nix develop path:./nix --command cargo run --locked --no-default-features --features desktop,discord
 
-# Windows installer and ZIP, cross-built from Linux, into target/dist
-nix develop path:./nix#windows --command scripts/build-windows
-
-# Format, lint and test everything
+# Run formatting, linting and tests
 scripts/check --fast
-```
+Build commands and required features may evolve. Consult the documentation before making changes to the build process.
+Documentation
+Guide	Description
+[Development](docs/development.md)	Development workflow and local testing
+[Architecture](docs/architecture.md)	Overview of the client and core components
+[Building](docs/building.md)	Toolchain, build options and release packaging
+[Discord implementation](docs/discord/README.md)	Implemented functionality and planned work
+[Voice](docs/voice.md)	Voice and audio implementation details
+[Windows](docs/windows-beta.md)	Windows packaging and platform notes
+[Measurements](docs/measurements/README.md)	Performance measurement methodology
 
-| Read this | For |
-| --- | --- |
-| [Development](docs/development.md) | Day-to-day work: the preview, local Matrix and LiveKit servers, voice tests |
-| [Architecture](docs/architecture.md) | How `mincord-core` and the Slint client fit together |
-| [Building](docs/building.md) | Toolchain, Cargo features, checks, releases |
-| [Discord](docs/discord/README.md) | What's done, what's next, and the fake server the tests use |
-| [Voice](docs/voice.md) | Calls, devices and audio processing |
-| [Windows](docs/windows-beta.md) | Packaging, the installer and Windows checks |
-| [Measurements](docs/measurements/README.md) | How memory and CPU are measured |
 
-## License
+Project status
+Mincord is a work in progress. Some Discord features may be incomplete, behave differently from the official client, or not be supported yet. Review the issue tracker and documentation for known limitations, and please report reproducible problems with enough detail to investigate them.
+- Browse open issues
+- Review releases
+- Contribute or suggest an improvement
+Privacy and account safety
+Mincord communicates with Discord services directly from the application. Review the source code and relevant documentation to understand how credentials, cached content, media and network requests are handled.
 
-Mincord is free software under the [GNU General Public License](LICENSE),
-version 3 or later. Builds with Matrix also include MatrixRTC libraries under
-the AGPL. Every release carries its dependencies' own licenses. Take it, I
-don't even care, baka.
+Mincord is an unofficial third-party client and is not affiliated with or endorsed by Discord. Use of third-party clients may carry account-related risks and may be inconsistent with Discord's terms or policies. Review Discord's current terms before using one, and do not use the application with an account you cannot afford to lose.
+Frequently asked questions
+<details>
+<summary><strong>Does Mincord use a browser engine?</strong></summary>
 
-## Thanks
+Mincord is designed around a native Rust and Slint interface rather than embedding a full Chromium-based application shell.
+</details>
 
-Mincord speaks to Discord the way its own apps do, as documented by
-[Discord Userdoccers](https://docs.discord.food), a community effort to
-document the user side of Discord's API. Thanks to everyone who writes it <3
+<details>
+<summary><strong>Can I use plugins from other Discord clients?</strong></summary>
 
-It stands on [Slint](https://slint.dev), [Skia](https://skia.org),
-[LiveKit](https://livekit.io) and WebRTC,
-[matrix-rust-sdk](https://github.com/matrix-org/matrix-rust-sdk) and
-[DeepFilterNet](https://github.com/Rikorose/DeepFilterNet). My patches to
-Slint live in [`vendor/`](vendor), with the rest of the code.
 
-<sub>Mincord isn't affiliated with or endorsed by Discord Inc. Discord is a
-trademark of Discord Inc.</sub>
+Compatibility with plugins made for other clients is not assumed. Those plugins may rely on different runtimes, internal APIs or interface structures.
+</details>
+
+<details>
+<summary><strong>Is Mincord affiliated with Discord?</strong></summary>
+
+
+No. Mincord is an independent, unofficial project. Discord is a trademark of Discord Inc.
+</details>
+
+<details>
+<summary><strong>Where can I report an issue?</strong></summary>
+
+
+Please open an issue in the GitHub issue tracker. Include your operating system, application version, steps to reproduce the problem and any relevant logs, while removing tokens or other sensitive information.
+</details>
+
+License
+Mincord is distributed under the GNU General Public License, version 3 or later. Some build configurations may include dependencies distributed under their own licenses. Review the relevant license files for details.
+Acknowledgements
+Mincord uses and builds upon open-source projects and community documentation, including:
+- Discord Userdoccers
+- Slint
+- Skia
+- LiveKit
+- WebRTC
+- matrix-rust-sdk
+- DeepFilterNet
+See the repository and dependency license notices for the complete list of third-party components.
+<p align="center">
+  <sub>Mincord is not affiliated with or endorsed by Discord Inc. Discord is a trademark of Discord Inc.</sub>
+</p>
