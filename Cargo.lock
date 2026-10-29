@@ -5670,7 +5670,7 @@ checksum = "cbf6f36070878c42c5233846cd3de24cf9016828fd47bc22957a687298bb21fc"
 
 [[package]]
 name = "mincord"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "arboard",

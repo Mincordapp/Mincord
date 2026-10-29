@@ -76,9 +76,34 @@ becomes `0.2.0nightly.20261020.5`, which pacman sorts after 0.1.0 and before
 sort it after 0.2.0. `sudo pacman -U` installs the file or its link; there's no
 repository, so `pacman -Syu` doesn't update it.
 
+## Stable releases
+
+A release builds from its tag on GitHub, `.github/workflows/release.yml`.
+Prepare it in the repository first: `scripts/set-version 0.1.0`, which writes
+the version into `Cargo.toml`, `Cargo.lock`, the Arch PKGBUILD and the
+metainfo's releases, then commit that and push the tag `v0.1.0`. Pushing a
+`vX.Y.Z` tag starts the workflow; Actions, Release, Run workflow builds a tag
+again. The first job refuses a tag that doesn't name `Cargo.toml`'s version,
+so the release is always what the tree says it is, and nothing is stamped in
+the workflow.
+
+Then the same two builds the nightly makes: `scripts/build-appimage` and
+`scripts/package-arch` on one runner, `scripts/build-windows discord
+--no-installer` in the Windows shell on another, with the Windows Skia build,
+cargo-xwin's MSVC files and the compiled Rust dependencies cached under the
+nightly's keys. A third job, on a Windows runner, compiles the installer that
+the nightly has to go without: it unpacks the portable ZIP and runs the same
+Inno Setup 7.1.0 over the same files as `scripts/package-windows.py` does
+under Wine, with the same defines, so the two produce the same
+`Mincord-VERSION-windows-x64-setup.exe`. The last job publishes the AppImage,
+its `.zsync` file, the Arch package, the Windows ZIP and installer, the source
+snapshot and `SHA256SUMS.txt` as the latest release, with the changes since
+the previous stable release in its notes. It is not a prerelease, so it is
+what the AppImage's update information and the Windows updater find.
+
 ## Nightly releases
 
-Releases are built locally, but a nightly of `main` builds on GitHub: Actions,
+A nightly of `main` builds on GitHub too: Actions,
 Nightly, Run workflow. `.github/workflows/nightly.yml` names it after the next
 minor version, the day (UTC) and the workflow's run number, such as
 `v0.2.0-nightly.20261020.5`, and titles it as the stable releases are, with the

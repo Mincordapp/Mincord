@@ -14,7 +14,8 @@ if (($#)); then
   appimage=$1
 else
   # The AppImage of Cargo.toml's version, which scripts/set-version sets.
-  current=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)
+  # Its lines end in CRLF, which the pattern allows for.
+  current=$(sed -n 's/^version = "\(.*\)"\r\?$/\1/p' Cargo.toml | head -1)
   appimage=target/dist/linux/Mincord-$current-x86_64.AppImage
 fi
 if [[ ! -f $appimage ]]; then

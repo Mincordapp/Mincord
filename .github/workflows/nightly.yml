@@ -24,7 +24,8 @@ jobs:
           ref: main
       - id: version
         run: |
-          current=$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -1)
+          # Cargo.toml's lines end in CRLF, which the pattern allows for.
+          current=$(sed -n 's/^version = "\(.*\)"\r\?$/\1/p' Cargo.toml | head -1)
           IFS=. read -r major minor _ <<< "${current%%-*}"
           # The run number orders nightlies of one day and keeps each tag
           # new; the release's title names the commit.

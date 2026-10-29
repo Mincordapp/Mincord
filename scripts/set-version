@@ -16,7 +16,9 @@ if ! [[ $version =~ ^$number\.$number\.$number(-$part(\.$part)*)?$ ]]; then
   exit 2
 fi
 # The package's version is the manifest's first; the lockfile's follows its name.
-sed -i "0,/^version = /s/^version = .*/version = \"$version\"/" Cargo.toml
+# Only the quoted version is rewritten: Cargo.toml's lines end in CRLF, and
+# a pattern reaching to the end of the line would take the CR with it.
+sed -i "0,/^version = /s/^version = \"[^\"]*\"/version = \"$version\"/" Cargo.toml
 sed -i "/^name = \"mincord\"$/{n;s/^version = .*/version = \"$version\"/}" Cargo.lock
 # A pkgver can't hold a prerelease's "-", and nightlies don't build from a tag.
 if [[ $version != *-* ]]; then
